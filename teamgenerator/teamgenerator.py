@@ -3,12 +3,12 @@ import random
 import math
 from redbot.core import commands
 
+
+def formatname(member):
+    return f"> {member.mention}"
+
 class teamgenerator(commands.Cog):
-    """Team Generator"""
-
-    def formatname(self):
-        return f"> {self.mention}"
-
+    """"Team Generator"""
     @commands.command()
     async def mycom(self, ctx):
         await ctx.send("I can do stuff!")
@@ -23,18 +23,18 @@ class teamgenerator(commands.Cog):
     #     await ctx.send(people)
 
     @commands.command()
-    async def getmembers(self, ctx):
+    async def team(self, ctx, val = none):
         if ctx.author.voice and ctx.author.voice.channel:
             vc = ctx.author.voice.channel
-            people = [i.mention for i in vc.members]
+            people = [formatname(i) for i in vc.members]
             random.shuffle(people)
             half = math.ceil(len(people) / 2)
             maps = ['Blind', 'Spit', 'Accent', 'Heaven', 'Icebox', 'Breeze']
             random_index = random.randrange(len(maps))
             em = discord.Embed(title="Team Generated", color=ctx.author.color)
-            em.insert_field_at(index=1, name="Map", value=(maps[random_index]))
-            em.add_field(name="Team 1", value=("\n".join(people[:half])))
-            em.add_field(name="Team 2", value=("\n".join(people[half:])))
+            em.add_field(name="Map", value=(maps[random_index]), inline=False)
+            em.add_field(name="Team 1", value=("\n".join(people[:half])), inline=True)
+            em.add_field(name="Team 2", value=("\n".join(people[half:])), inline=True)
             await ctx.send(embed=em)
         else:
             await ctx.send(f"**You are not connected to a VC, {ctx.author.mention}**")
