@@ -1,8 +1,8 @@
 {
 	"author": ["hatch"],
-	"description": "teamgenerator for a VC",
-	"install_msg": "Thanks for installing.",
-	"short": "teamgenerator",
+	"description": "This cog will tell when there is an appointment available for global entry",
+	"install_msg": "Thank you for downloading this cog.",
+	"short": "Notifies you when an update for an appointment is available.",
 	"tags": ["utility"],
-	"type": "COG"
+	"requirements" : ["feedparser"]
 }
