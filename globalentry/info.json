@@ -1,0 +1,8 @@
+{
+	"author": ["hatch"],
+	"description": "teamgenerator for a VC",
+	"install_msg": "Thanks for installing.",
+	"short": "teamgenerator",
+	"tags": ["utility"],
+	"type": "COG"
+}
