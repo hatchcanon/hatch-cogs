@@ -31,7 +31,7 @@ class teamgenerator(commands.Cog):
             pass
         else:
             if game == "val":
-                maps = ['Blind', 'Spit', 'Accent', 'Heaven', 'Icebox', 'Breeze']
+                maps = ['Accent', 'Bind', 'Breeze', 'Fracture', 'Haven', 'Icebox', 'Pearl', 'Split']
                 random_index = random.randrange(len(maps))
                 valmaps = maps[random_index]
                 em.add_field(name="Map", value=(valmaps), inline=False)
