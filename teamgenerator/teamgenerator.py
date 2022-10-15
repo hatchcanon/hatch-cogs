@@ -36,7 +36,7 @@ class teamgenerator(commands.Cog):
                 valmaps = maps[random_index]
                 em.add_field(name="Map", value=(valmaps), inline=False)
             if game == "csgo":
-                maps = ['Inferno', 'Mirage', 'Nuke', 'Overpass', 'Dust II', 'Vertigo', 'Ancient']
+                maps = ['Ancient', 'Dust II', 'Inferno', 'Mirage', 'Nuke', 'Overpass', 'Vertigo']
                 random_index = random.randrange(len(maps))
                 valmaps = maps[random_index]
                 em.add_field(name="Map", value=(valmaps), inline=False)
