@@ -1,0 +1,9 @@
+{
+	"author": ["JDG"],
+	"min_bot_version": "3.5.0",
+	"description": "I stole this from JDG because he has stopped supporting the cog.",
+	"hidden": false,
+	"install_msg": "Welcome, specify a Wordle ch with [p]wordlechannel",
+	"short": "A Wordle companion cog",
+	"tags": ["game", "wordle"]
+}
