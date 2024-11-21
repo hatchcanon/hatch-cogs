@@ -4,8 +4,8 @@ from discord.ext import commands
 from discord.ui import View, Button
 from typing import Dict, List
 
-class ButtonReact(commands.Cog):
-    def __init__(self, bot):
+class ButtonReact(commands.Cog):  # Ensure inheritance from commands.Cog
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.button_reactions: Dict[int, Dict[str, List[str]]] = {}  # Server-specific word-button mapping
 
@@ -56,7 +56,7 @@ class ButtonReact(commands.Cog):
 
     @commands.hybrid_command(name="addbutton")
     @commands.bot_has_permissions(embed_links=True)
-    async def addbutton(self, ctx, word: str, button: str):
+    async def addbutton(self, ctx: commands.Context, word: str, button: str):
         """
         Add an auto reaction to a word.
         """
@@ -75,7 +75,7 @@ class ButtonReact(commands.Cog):
 
     @commands.hybrid_command(name="delbutton")
     @commands.bot_has_permissions(embed_links=True)
-    async def delbutton(self, ctx, word: str, button: str):
+    async def delbutton(self, ctx: commands.Context, word: str, button: str):
         """
         Delete an auto reaction to a word.
         """
@@ -93,7 +93,7 @@ class ButtonReact(commands.Cog):
 
     @commands.hybrid_command(name="delallbutton")
     @commands.bot_has_permissions(embed_links=True)
-    async def delallbutton(self, ctx):
+    async def delallbutton(self, ctx: commands.Context):
         """
         Delete ALL button reactions in the server.
         """
@@ -106,7 +106,7 @@ class ButtonReact(commands.Cog):
 
     @commands.hybrid_command(name="listbutton")
     @commands.bot_has_permissions(embed_links=True)
-    async def listbutton(self, ctx):
+    async def listbutton(self, ctx: commands.Context):
         """
         List button reactions for this server.
         """
@@ -118,6 +118,3 @@ class ButtonReact(commands.Cog):
             await ctx.send(embed=embed)
         else:
             await ctx.send("No button reactions are configured for this server.")
-
-async def setup(bot):
-    await bot.add_cog(ButtonReact(bot))
