@@ -1,17 +1,8 @@
 import asyncio
-import copy
 import discord
-import re
-
-from redbot.core import Config, commands, checks
-from redbot.core.utils.chat_formatting import pagify
-from redbot.core.utils.menus import start_adding_reactions
-from redbot.core.utils.predicates import ReactionPredicate
-
-
-EMOJI_RE = re.compile("(<a?)?:\\w+:(\\d{18,19}>)?")
-EMOJI_ID_RE = re.compile("\\d{18,19}")
-
+from discord.ext import commands
+from discord.ui import View, Button
+from typing import Dict, List
 
 class ButtonReact(commands.Cog):
     def __init__(self, bot):
@@ -52,7 +43,8 @@ class ButtonReact(commands.Cog):
             await interaction.message.edit(view=self.view)
             await interaction.response.defer()  # Acknowledge the interaction silently
 
-    @commands.command(name="buttonreact")
+    @commands.hybrid_command(name="buttonreact")
+    @commands.bot_has_permissions(read_message_history=True, add_reactions=True, embed_links=True)
     async def button_react(self, ctx: commands.Context):
         """
         Sends a message with interactive buttons.
@@ -62,6 +54,8 @@ class ButtonReact(commands.Cog):
         view = self.ButtonReactView(self, buttons)
         await ctx.send("Click a button to participate:", view=view)
 
+    @commands.hybrid_command(name="addbutton")
+    @commands.bot_has_permissions(embed_links=True)
     async def addbutton(self, ctx, word: str, button: str):
         """
         Add an auto reaction to a word.
@@ -79,6 +73,8 @@ class ButtonReact(commands.Cog):
         else:
             await ctx.send(f"The button '{button}' is already assigned to the word '{word}'.")
 
+    @commands.hybrid_command(name="delbutton")
+    @commands.bot_has_permissions(embed_links=True)
     async def delbutton(self, ctx, word: str, button: str):
         """
         Delete an auto reaction to a word.
@@ -95,6 +91,8 @@ class ButtonReact(commands.Cog):
         else:
             await ctx.send(f"No buttons are assigned to the word '{word}'.")
 
+    @commands.hybrid_command(name="delallbutton")
+    @commands.bot_has_permissions(embed_links=True)
     async def delallbutton(self, ctx):
         """
         Delete ALL button reactions in the server.
@@ -106,6 +104,8 @@ class ButtonReact(commands.Cog):
         else:
             await ctx.send("No button reactions found for this server.")
 
+    @commands.hybrid_command(name="listbutton")
+    @commands.bot_has_permissions(embed_links=True)
     async def listbutton(self, ctx):
         """
         List button reactions for this server.
@@ -118,3 +118,6 @@ class ButtonReact(commands.Cog):
             await ctx.send(embed=embed)
         else:
             await ctx.send("No button reactions are configured for this server.")
+
+async def setup(bot):
+    await bot.add_cog(ButtonReact(bot))
