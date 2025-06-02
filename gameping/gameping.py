@@ -24,6 +24,23 @@ class GamePingView(discord.ui.View):
         self.author_id = author_id
         self.joined_users: List[int] = []
         self.message: Optional[discord.Message] = None
+        self.bot = cog.bot
+        
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Check if user can interact with the buttons"""
+        # Check which button was clicked
+        custom_id = interaction.data.get("custom_id", "")
+        
+        # If it's the can't anymore button, check if user has joined
+        if "cant_join" in custom_id:
+            if interaction.user.id not in self.joined_users:
+                await interaction.response.send_message(
+                    "You need to join the game first before you can leave!",
+                    ephemeral=True
+                )
+                return False
+                
+        return True
         
     @discord.ui.button(label="Join", style=discord.ButtonStyle.success, emoji="✅")
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -48,20 +65,15 @@ class GamePingView(discord.ui.View):
         if len(self.joined_users) >= self.players_needed:
             await self._game_ready(interaction)
             
-    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌")
+    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌", custom_id="cant_join")
     async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle can't join button clicks"""
         user_id = interaction.user.id
         
-        # Remove user from joined list if they were in it
-        if user_id in self.joined_users:
-            self.joined_users.remove(user_id)
-            embed = await self._create_embed()
-            await interaction.response.edit_message(embed=embed, view=self)
-        else:
-            await interaction.response.send_message(
-                "You weren't in the game anyway!", ephemeral=True
-            )
+        # Remove user from joined list
+        self.joined_users.remove(user_id)
+        embed = await self._create_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
             
     async def _create_embed(self) -> discord.Embed:
         """Create the embed for the game ping message"""
@@ -136,10 +148,16 @@ class GamePingView(discord.ui.View):
                         inline=False
                     )
                     
-                for item in self.children:
-                    item.disabled = True
+                # Create a new view with disabled buttons
+                new_view = discord.ui.View()
+                button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
+                                           emoji="✅", disabled=True)
+                button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
+                                           emoji="❌", disabled=True)
+                new_view.add_item(button1)
+                new_view.add_item(button2)
                     
-                await self.message.edit(embed=embed, view=self)
+                await self.message.edit(embed=embed, view=new_view)
             except Exception as e:
                 log.error(f"Failed to update timed out game message: {e}")
 
@@ -215,23 +233,23 @@ class GamePing(commands.Cog):
         embed.add_field(name="Channel", value=channel.mention, inline=True)
         embed.add_field(
             name="Usage",
-            value=f"Players can now use `/game` and select **{game}** to create a game ping.",
+            value=f"Players can now use `/ping` and select **{game}** to create a game ping.",
             inline=False
         )
         
         await interaction.response.send_message(embed=embed, ephemeral=True)
         
-    @app_commands.command(name="game", description="Look for players for a game")
+    @app_commands.command(name="ping", description="Look for players for a game")
     @app_commands.describe(
         game="Select the game you want to play",
-        players_needed="Number of players needed"
+        players_needed="Number of players needed (default: 5)"
     )
     @app_commands.guild_only()
     async def game_slash(
         self,
         interaction: discord.Interaction,
         game: str,
-        players_needed: app_commands.Range[int, 1, 50]
+        players_needed: Optional[app_commands.Range[int, 1, 50]] = 5
     ):
         """Create a game ping"""
         # Get guild config
@@ -306,6 +324,9 @@ class GamePing(commands.Cog):
         
         # Get the message and store it in the view
         view.message = await interaction.original_response()
+        
+        # Store the view in the bot to ensure timeout works
+        self.bot.add_view(view, message_id=view.message.id)
         
     @game_slash.autocomplete("game")
     async def game_autocomplete(
