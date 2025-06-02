@@ -19,6 +19,6 @@
 | Cog                | Description                                                                                                                                                                                                                  |
 |--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | teamgenerator         | <details><summary>Team Generator.</summary>Can provide random maps too.</details>                                                                                                   |
-| test          | <details><summary>don't use.</summary>experiment.</details>                                                                       |
+| gameping          | <details><summary>ping for a stack.</summary>experiment.</details>                                                                       |
 
 redbot hatchtest --dev
