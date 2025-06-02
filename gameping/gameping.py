@@ -48,7 +48,7 @@ class GamePingView(discord.ui.View):
         if len(self.joined_users) >= self.players_needed:
             await self._game_ready(interaction)
             
-    @discord.ui.button(label="Can't Join", style=discord.ButtonStyle.danger, emoji="❌")
+    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌")
     async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle can't join button clicks"""
         user_id = interaction.user.id
