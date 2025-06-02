@@ -1,0 +1,19 @@
+{
+    "name": "GamePing",
+    "author": ["hatch"],
+    "description": "Create game pings with interactive buttons for players to join",
+    "install_msg": "Thanks for installing GamePing! Use `[p]help gameping` to get started. Make sure to sync slash commands with `[p]slash sync`!",
+    "short": "Game ping system with buttons",
+    "min_bot_version": "3.5.0",
+    "min_python_version": [3, 8, 0],
+    "type": "COG",
+    "requirements": [],
+    "tags": [
+        "gaming",
+        "utility",
+        "buttons",
+        "slash",
+        "ping"
+    ],
+    "end_user_data_statement": "This cog stores Discord user IDs temporarily during active game sessions to track who has joined a game ping. This data is only kept in memory during the 30-minute game ping duration and is not permanently stored. Guild configurations (game names, roles, and channels) are stored permanently."
+}
