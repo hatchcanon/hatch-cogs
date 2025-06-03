@@ -22,7 +22,7 @@ class GamePingView(discord.ui.View):
         self.channel_id = channel_id
         self.guild_id = guild_id
         self.author_id = author_id
-        self.joined_users: List[int] = []
+        self.joined_users: List[int] = [author_id]  # Auto-add the creator
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
         
@@ -80,7 +80,7 @@ class GamePingView(discord.ui.View):
         players_joined = len(self.joined_users)
         embed = discord.Embed(
             title=f"🎮 Game: {self.game}",
-            description=f"Looking for people to play **{self.game}**",
+            description=f"Looking for people to play **{self.game}**\nStarted by <@{self.author_id}>",
             color=discord.Color.blue() if players_joined < self.players_needed else discord.Color.green(),
             timestamp=datetime.utcnow()
         )
@@ -100,7 +100,7 @@ class GamePingView(discord.ui.View):
                 inline=False
             )
             
-        embed.set_footer(text=f"Started by user ID: {self.author_id}")
+        embed.set_footer(text="Expires in 30 minutes")
         return embed
         
     async def _game_ready(self, interaction: discord.Interaction):
@@ -127,39 +127,64 @@ class GamePingView(discord.ui.View):
                 embed=ready_embed
             )
             
+        # Clean up from active views
+        if hasattr(self.cog, 'active_views') and self.message:
+            self.cog.active_views.pop(self.message.id, None)
+            
         self.stop()
         
     async def on_timeout(self):
         """Handle view timeout"""
-        # Update message to show game was cancelled
-        if self.message:
+        # Ensure we have the message reference
+        if not self.message:
+            log.error("No message reference found for timeout handling")
+            return
+            
+        try:
+            # Fetch the message to ensure it still exists
             try:
-                embed = discord.Embed(
-                    title=f"🎮 Game: {self.game} - CANCELLED",
-                    description="Not enough players joined in time. Game cancelled.",
-                    color=discord.Color.red()
+                channel = self.bot.get_channel(self.channel_id)
+                if channel:
+                    self.message = await channel.fetch_message(self.message.id)
+            except discord.NotFound:
+                log.error("Message not found for timeout update")
+                return
+            except Exception as e:
+                log.error(f"Error fetching message: {e}")
+                return
+                
+            embed = discord.Embed(
+                title=f"🎮 Game: {self.game} - CANCELLED",
+                description="Not enough players joined in time. Game cancelled.",
+                color=discord.Color.red(),
+                timestamp=datetime.utcnow()
+            )
+            
+            if self.joined_users:
+                joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
+                embed.add_field(
+                    name="Players who joined",
+                    value="\n".join(joined_mentions[:10]),
+                    inline=False
                 )
                 
-                if self.joined_users:
-                    joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
-                    embed.add_field(
-                        name="Players who joined",
-                        value="\n".join(joined_mentions[:10]),
-                        inline=False
-                    )
-                    
-                # Create a new view with disabled buttons
-                new_view = discord.ui.View()
-                button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
-                                           emoji="✅", disabled=True)
-                button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
-                                           emoji="❌", disabled=True)
-                new_view.add_item(button1)
-                new_view.add_item(button2)
-                    
-                await self.message.edit(embed=embed, view=new_view)
-            except Exception as e:
-                log.error(f"Failed to update timed out game message: {e}")
+            # Create a new view with disabled buttons
+            new_view = discord.ui.View()
+            button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
+                                       emoji="✅", disabled=True)
+            button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
+                                       emoji="❌", disabled=True)
+            new_view.add_item(button1)
+            new_view.add_item(button2)
+                
+            await self.message.edit(embed=embed, view=new_view)
+            log.info(f"Game ping for {self.game} timed out and was cancelled")
+            
+            # Clean up from active views
+            if hasattr(self.cog, 'active_views'):
+                self.cog.active_views.pop(self.message.id, None)
+        except Exception as e:
+            log.error(f"Failed to update timed out game message: {e}")
 
 
 class GamePing(commands.Cog):
@@ -170,6 +195,7 @@ class GamePing(commands.Cog):
     def __init__(self, bot: Red):
         self.bot = bot
         self.config = Config.get_conf(self, identifier=1234567890)
+        self.active_views: Dict[int, GamePingView] = {}  # Track active views by message ID
         
         # Guild config
         default_guild = {
@@ -185,9 +211,8 @@ class GamePing(commands.Cog):
     async def cog_unload(self):
         """Called when the cog is unloaded"""
         # Cancel all active views
-        for view in self.bot.views:
-            if isinstance(view, GamePingView):
-                view.stop()
+        for view in self.active_views.values():
+            view.stop()
         log.info("GamePing cog unloaded")
         
     @app_commands.command(name="gameping", description="Configure a game ping")
@@ -325,8 +350,37 @@ class GamePing(commands.Cog):
         # Get the message and store it in the view
         view.message = await interaction.original_response()
         
-        # Store the view in the bot to ensure timeout works
-        self.bot.add_view(view, message_id=view.message.id)
+        # Track the view
+        self.active_views[view.message.id] = view
+        
+        # Check if game is already ready (e.g., 1 player game)
+        if players_needed == 1:
+            # Game is immediately ready
+            joined_mentions = f"<@{interaction.user.id}>"
+            ready_embed = discord.Embed(
+                title="🎮 Game Ready!",
+                description=f"**{game_config['game_display_name']}** is ready to start!",
+                color=discord.Color.green()
+            )
+            ready_embed.add_field(
+                name="Players",
+                value=joined_mentions
+            )
+            await channel.send(
+                content=f"{joined_mentions} - Your game is ready!",
+                embed=ready_embed
+            )
+            
+            # Disable the view
+            for item in view.children:
+                item.disabled = True
+            await view.message.edit(view=view)
+            view.stop()
+            self.active_views.pop(view.message.id, None)
+        
+        # Check if game is already ready (e.g., 1 player game)
+        if players_needed == 1:
+            await view._game_ready(interaction)
         
     @game_slash.autocomplete("game")
     async def game_autocomplete(
