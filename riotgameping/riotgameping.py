@@ -18,9 +18,10 @@ class RiotGamePingView(discord.ui.View):
         self.game = game
         self.players_needed = players_needed
         self.author_id = author_id
-        self.joined_users: List[int] = [author_id]  # Auto-add the creator
+        self.joined_users: List[int] = []  # Don't auto-add the creator
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
+        self.created_at = datetime.utcnow()  # Track when the game ping was created
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if user can interact with the buttons"""
@@ -78,16 +79,16 @@ class RiotGamePingView(discord.ui.View):
         # Set color and emoji based on game
         if self.game == "Valorant":
             color = discord.Color.red()
-            emoji = "🎯"
+            emoji = "<:emoji:740501303838638092>"
         else:  # League of Legends
             color = discord.Color.blue()
-            emoji = "⚔️"
+            emoji = "<:emoji:740501304165662750>"
             
         embed = discord.Embed(
             title=f"{emoji} Game: {self.game}",
             description=f"Looking for people to play **{self.game}**\nStarted by <@{self.author_id}>",
             color=color if players_joined < self.players_needed else discord.Color.green(),
-            timestamp=datetime.utcnow()
+            timestamp=self.created_at  # Use creation time instead of current time
         )
         
         embed.add_field(
@@ -96,8 +97,10 @@ class RiotGamePingView(discord.ui.View):
             inline=True
         )
         
-        if self.joined_users:
-            joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
+        # Show both the author and joined users in the "Joined" field
+        all_players = [self.author_id] + self.joined_users
+        if all_players:
+            joined_mentions = [f"<@{uid}>" for uid in all_players]
             embed.add_field(
                 name="Joined",
                 value="\n".join(joined_mentions[:10]) + 
@@ -105,7 +108,12 @@ class RiotGamePingView(discord.ui.View):
                 inline=False
             )
             
-        embed.set_footer(text="Expires in 30 minutes")
+        # Calculate remaining time
+        elapsed_time = datetime.utcnow() - self.created_at
+        remaining_time = timedelta(minutes=30) - elapsed_time
+        remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
+        
+        embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
         return embed
         
     async def _game_ready(self, interaction: discord.Interaction):
@@ -117,10 +125,12 @@ class RiotGamePingView(discord.ui.View):
         # Send ready message
         channel = interaction.channel
         if channel:
-            joined_mentions = " ".join([f"<@{uid}>" for uid in self.joined_users])
+            # Include both author and joined users in the ready message
+            all_players = [self.author_id] + self.joined_users
+            joined_mentions = " ".join([f"<@{uid}>" for uid in all_players])
             
             # Set emoji based on game
-            emoji = "🎯" if self.game == "Valorant" else "⚔️"
+            emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
             
             ready_embed = discord.Embed(
                 title=f"{emoji} Game Ready!",
@@ -163,17 +173,19 @@ class RiotGamePingView(discord.ui.View):
                 return
                 
             # Set emoji based on game
-            emoji = "🎯" if self.game == "Valorant" else "⚔️"
+            emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
                 
             embed = discord.Embed(
                 title=f"{emoji} Game: {self.game} - CANCELLED",
                 description="Not enough players joined in time. Game cancelled.",
                 color=discord.Color.red(),
-                timestamp=datetime.utcnow()
+                timestamp=self.created_at  # Use creation time for consistency
             )
             
-            if self.joined_users:
-                joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
+            # Show both author and joined users in timeout message
+            all_players = [self.author_id] + self.joined_users
+            if all_players:
+                joined_mentions = [f"<@{uid}>" for uid in all_players]
                 embed.add_field(
                     name="Players who joined",
                     value="\n".join(joined_mentions[:10]),
@@ -224,23 +236,23 @@ class RiotGamePing(commands.Cog):
         log.info("RiotGamePing cog unloaded")
         
     @app_commands.command(name="val", description="Look for players for Valorant")
-    @app_commands.describe(players_needed="Number of players needed (default: 5)")
+    @app_commands.describe(players_needed="Number of players needed (default: 4)")
     @app_commands.guild_only()
     async def valorant_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 5
+        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4
     ):
         """Create a Valorant game ping"""
         await self._create_game_ping(interaction, "Valorant", players_needed, self.VALORANT_ROLE_ID)
         
     @app_commands.command(name="lol", description="Look for players for League of Legends")
-    @app_commands.describe(players_needed="Number of players needed (default: 5)")
+    @app_commands.describe(players_needed="Number of players needed (default: 4)")
     @app_commands.guild_only()
     async def lol_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 5
+        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4
     ):
         """Create a League of Legends game ping"""
         await self._create_game_ping(interaction, "League of Legends", players_needed, self.LOL_ROLE_ID)
@@ -268,12 +280,9 @@ class RiotGamePing(commands.Cog):
         # Create initial embed
         embed = await view._create_embed()
         
-        # Set emoji for mention message
-        emoji = "🎯" if game == "Valorant" else "⚔️"
-        
         # Send the message with role ping
         await interaction.response.send_message(
-            content=f"{role.mention} {emoji} Looking for **{game}** players!",
+            content=f"{role.mention} Looking for **{players_needed}** players!",
             embed=embed,
             view=view,
             allowed_mentions=discord.AllowedMentions(roles=True)
@@ -285,8 +294,8 @@ class RiotGamePing(commands.Cog):
         # Track the view
         self.active_views[view.message.id] = view
         
-        # Check if game is already ready (e.g., 1 player game)
-        if players_needed == 1:
+        # Check if game is already ready (e.g., 1 player game with 0 needed)
+        if players_needed == 0:
             await view._game_ready(interaction)
 
 
