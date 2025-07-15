@@ -238,7 +238,7 @@ class RiotGamePing(commands.Cog):
         
     @app_commands.command(name="val", description="Look for players for Valorant")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_comands.descruve(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
+    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
     @app_commands.guild_only()
     async def valorant_ping(
         self,
@@ -251,7 +251,7 @@ class RiotGamePing(commands.Cog):
         
     @app_commands.command(name="lol", description="Look for players for League of Legends")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_comands.descruve(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
+    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
     @app_commands.guild_only()
     async def lol_ping(
         self,
