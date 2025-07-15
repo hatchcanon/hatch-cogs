@@ -238,22 +238,26 @@ class RiotGamePing(commands.Cog):
         
     @app_commands.command(name="val", description="Look for players for Valorant")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
+    @app_comands.descruve(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
     @app_commands.guild_only()
     async def valorant_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4
+        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
+        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
     ):
         """Create a Valorant game ping"""
         await self._create_game_ping(interaction, "Valorant", players_needed, self.VALORANT_ROLE_ID)
         
     @app_commands.command(name="lol", description="Look for players for League of Legends")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
+    @app_comands.descruve(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
     @app_commands.guild_only()
     async def lol_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4
+        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
+        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
     ):
         """Create a League of Legends game ping"""
         await self._create_game_ping(interaction, "League of Legends", players_needed, self.LOL_ROLE_ID)
