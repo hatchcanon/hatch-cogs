@@ -23,6 +23,8 @@ class RiotGamePingView(discord.ui.View):
         self.bot = cog.bot
         self.minutes_till_expiry = minutes_till_expiry
         self.created_at = datetime.utcnow()  # Track when the game ping was created
+        self.expiry_time = self.created_at + timedelta(minutes=minutes_till_expiry)  # Fixed expiry time
+        self._timeout_task: Optional[asyncio.Task] = None  # Custom timeout task
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Check if user can interact with the buttons"""
@@ -62,6 +64,9 @@ class RiotGamePingView(discord.ui.View):
         # Check if we have enough players (not including the author)
         if len(self.joined_users) >= self.players_needed:
             await self._game_ready(interaction)
+        else:
+            # Check if the game should have expired
+            await self._check_expiry()
             
     @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌", custom_id="cant_join")
     async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -77,6 +82,9 @@ class RiotGamePingView(discord.ui.View):
         self.joined_users.remove(user_id)
         embed = await self._create_embed()
         await interaction.response.edit_message(embed=embed, view=self)
+        
+        # Check if the game should have expired
+        await self._check_expiry()
             
     async def _create_embed(self) -> discord.Embed:
         """Create the embed for the game ping message"""
@@ -114,9 +122,8 @@ class RiotGamePingView(discord.ui.View):
                 inline=False
             )
             
-        # Calculate remaining time
-        elapsed_time = datetime.utcnow() - self.created_at
-        remaining_time = timedelta(minutes=self.minutes_till_expiry) - elapsed_time
+        # Calculate remaining time based on fixed expiry time
+        remaining_time = self.expiry_time - datetime.utcnow()
         remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
         
         embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
@@ -157,6 +164,31 @@ class RiotGamePingView(discord.ui.View):
             self.cog.active_views.pop(self.message.id, None)
             
         self.stop()
+        
+    async def _check_expiry(self):
+        """Check if the game should expire and handle it"""
+        if datetime.utcnow() >= self.expiry_time:
+            await self.on_timeout()
+        
+    async def _start_custom_timeout(self):
+        """Start a custom timeout task that respects the fixed expiry time"""
+        if self._timeout_task:
+            self._timeout_task.cancel()
+            
+        # Calculate remaining seconds until expiry
+        remaining_time = self.expiry_time - datetime.utcnow()
+        remaining_seconds = max(0, remaining_time.total_seconds())
+        
+        if remaining_seconds > 0:
+            self._timeout_task = asyncio.create_task(self._custom_timeout_handler(remaining_seconds))
+    
+    async def _custom_timeout_handler(self, seconds: float):
+        """Custom timeout handler that waits for the exact expiry time"""
+        try:
+            await asyncio.sleep(seconds)
+            await self.on_timeout()
+        except asyncio.CancelledError:
+            pass  # Task was cancelled, which is fine
         
     async def _cancel_game(self, interaction: discord.Interaction):
         """Handle when the author cancels the game"""
@@ -343,6 +375,9 @@ class RiotGamePing(commands.Cog):
         
         # Get the message and store it in the view
         view.message = await interaction.original_response()
+        
+        # Start the custom timeout task
+        await view._start_custom_timeout()
         
         # Track the view
         self.active_views[view.message.id] = view
