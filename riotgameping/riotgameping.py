@@ -16,9 +16,9 @@ class RiotGamePingView(discord.ui.View):
         super().__init__(timeout=1800)  # 30 minutes timeout
         self.cog = cog
         self.game = game
-        self.players_needed = players_needed
+        self.players_needed = players_needed + 1 # The author counts as one
         self.author_id = author_id
-        self.joined_users: List[int] = []  # Don't auto-add the creator
+        self.joined_users: List[int] = [author_id]  # Auto add the author for a game
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
         self.created_at = datetime.utcnow()  # Track when the game ping was created
