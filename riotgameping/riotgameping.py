@@ -16,9 +16,9 @@ class RiotGamePingView(discord.ui.View):
         super().__init__(timeout=minutes_till_expiry*60)
         self.cog = cog
         self.game = game
-        self.players_needed = players_needed + 1 # The author counts as one
+        self.players_needed = players_needed
         self.author_id = author_id
-        self.joined_users: List[int] = [author_id]  # Auto add the author for a game
+        self.joined_users: List[int] = []  # Don't auto-add the creator
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
         self.minutes_till_expiry = minutes_till_expiry
@@ -59,8 +59,8 @@ class RiotGamePingView(discord.ui.View):
         embed = await self._create_embed()
         await interaction.response.edit_message(embed=embed, view=self)
         
-        # Check if we have enough players
-        if len(self.joined_users) >= self.players_needed:
+        # Check if we have enough players (including the author)
+        if len(self.joined_users) + 1 >= self.players_needed:
             await self._game_ready(interaction)
             
     @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌", custom_id="cant_join")
@@ -75,7 +75,8 @@ class RiotGamePingView(discord.ui.View):
             
     async def _create_embed(self) -> discord.Embed:
         """Create the embed for the game ping message"""
-        players_joined = len(self.joined_users)
+        # Total players including author
+        players_joined = len(self.joined_users) + 1  # +1 for the author
         
         # Set color and emoji based on game
         if self.game == "Valorant":
@@ -238,7 +239,7 @@ class RiotGamePing(commands.Cog):
         
     @app_commands.command(name="val", description="Look for players for Valorant")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
+    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
     @app_commands.guild_only()
     async def valorant_ping(
         self,
@@ -251,7 +252,7 @@ class RiotGamePing(commands.Cog):
         
     @app_commands.command(name="lol", description="Look for players for League of Legends")
     @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default:30)")
+    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
     @app_commands.guild_only()
     async def lol_ping(
         self,
@@ -300,8 +301,8 @@ class RiotGamePing(commands.Cog):
         # Track the view
         self.active_views[view.message.id] = view
         
-        # Check if game is already ready (e.g., 1 player game with 0 needed)
-        if players_needed == 0:
+        # Check if game is already ready (e.g., 1 player game)
+        if players_needed == 1:
             await view._game_ready(interaction)
 
 
