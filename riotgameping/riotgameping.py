@@ -111,7 +111,7 @@ class RiotGamePingView(discord.ui.View):
             
         # Calculate remaining time
         elapsed_time = datetime.utcnow() - self.created_at
-        remaining_time = timedelta(minutes=minutes_till_expiry) - elapsed_time
+        remaining_time = timedelta(minutes=self.minutes_till_expiry) - elapsed_time
         remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
         
         embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
