@@ -12,8 +12,8 @@ log = logging.getLogger("red.riotgameping")
 class RiotGamePingView(discord.ui.View):
     """View containing Join/Can't Join buttons for riot game pings"""
     
-    def __init__(self, cog, game: str, players_needed: int, author_id: int):
-        super().__init__(timeout=1800)  # 30 minutes timeout
+    def __init__(self, cog, game: str, players_needed: int, minutes_till_expiry: int, author_id: int):
+        super().__init__(timeout=minutes_till_expiry*60)
         self.cog = cog
         self.game = game
         self.players_needed = players_needed + 1 # The author counts as one
@@ -21,6 +21,7 @@ class RiotGamePingView(discord.ui.View):
         self.joined_users: List[int] = [author_id]  # Auto add the author for a game
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
+        self.minutes_till_expiry = minutes_till_expiry
         self.created_at = datetime.utcnow()  # Track when the game ping was created
         
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -110,7 +111,7 @@ class RiotGamePingView(discord.ui.View):
             
         # Calculate remaining time
         elapsed_time = datetime.utcnow() - self.created_at
-        remaining_time = timedelta(minutes=30) - elapsed_time
+        remaining_time = timedelta(minutes=minutes_till_expiry) - elapsed_time
         remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
         
         embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
@@ -257,7 +258,7 @@ class RiotGamePing(commands.Cog):
         """Create a League of Legends game ping"""
         await self._create_game_ping(interaction, "League of Legends", players_needed, self.LOL_ROLE_ID)
         
-    async def _create_game_ping(self, interaction: discord.Interaction, game: str, players_needed: int, role_id: int):
+    async def _create_game_ping(self, interaction: discord.Interaction, game: str, players_needed: int, minutes_till_expiry: int, role_id: int):
         """Create a game ping for the specified game"""
         # Get the role
         role = interaction.guild.get_role(role_id)
@@ -274,6 +275,7 @@ class RiotGamePing(commands.Cog):
             cog=self,
             game=game,
             players_needed=players_needed,
+            minutes_till_expiry=minutes_till_expiry,
             author_id=interaction.user.id
         )
         
