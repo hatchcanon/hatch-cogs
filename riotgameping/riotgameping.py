@@ -29,9 +29,9 @@ class RiotGamePingView(discord.ui.View):
         # Check which button was clicked
         custom_id = interaction.data.get("custom_id", "")
         
-        # If it's the can't anymore button, check if user has joined
+        # If it's the can't anymore button, check if user has joined OR is the author
         if "cant_join" in custom_id:
-            if interaction.user.id not in self.joined_users:
+            if interaction.user.id not in self.joined_users and interaction.user.id != self.author_id:
                 await interaction.response.send_message(
                     "You need to join the game first before you can leave!",
                     ephemeral=True
@@ -59,14 +59,19 @@ class RiotGamePingView(discord.ui.View):
         embed = await self._create_embed()
         await interaction.response.edit_message(embed=embed, view=self)
         
-        # Check if we have enough players (including the author)
-        if len(self.joined_users) + 1 >= self.players_needed:
+        # Check if we have enough players (not including the author)
+        if len(self.joined_users) >= self.players_needed:
             await self._game_ready(interaction)
             
     @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌", custom_id="cant_join")
     async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle can't join button clicks"""
         user_id = interaction.user.id
+        
+        # If it's the author, cancel the entire game
+        if user_id == self.author_id:
+            await self._cancel_game(interaction)
+            return
         
         # Remove user from joined list
         self.joined_users.remove(user_id)
@@ -75,8 +80,8 @@ class RiotGamePingView(discord.ui.View):
             
     async def _create_embed(self) -> discord.Embed:
         """Create the embed for the game ping message"""
-        # Total players including author
-        players_joined = len(self.joined_users) + 1  # +1 for the author
+        # Only count joined users, not the author
+        players_joined = len(self.joined_users)
         
         # Set color and emoji based on game
         if self.game == "Valorant":
@@ -99,10 +104,9 @@ class RiotGamePingView(discord.ui.View):
             inline=True
         )
         
-        # Show both the author and joined users in the "Joined" field
-        all_players = [self.author_id] + self.joined_users
-        if all_players:
-            joined_mentions = [f"<@{uid}>" for uid in all_players]
+        # Show joined users in the "Joined" field (author not included in count)
+        if self.joined_users:
+            joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
             embed.add_field(
                 name="Joined",
                 value="\n".join(joined_mentions[:10]) + 
@@ -148,6 +152,48 @@ class RiotGamePingView(discord.ui.View):
                 embed=ready_embed
             )
             
+        # Clean up from active views
+        if hasattr(self.cog, 'active_views') and self.message:
+            self.cog.active_views.pop(self.message.id, None)
+            
+        self.stop()
+        
+    async def _cancel_game(self, interaction: discord.Interaction):
+        """Handle when the author cancels the game"""
+        # Disable buttons
+        for item in self.children:
+            item.disabled = True
+            
+        # Set emoji based on game
+        emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
+            
+        embed = discord.Embed(
+            title=f"{emoji} Game: {self.game} - CANCELLED",
+            description="Game cancelled by the host.",
+            color=discord.Color.red(),
+            timestamp=self.created_at
+        )
+        
+        # Show joined users if any
+        if self.joined_users:
+            joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
+            embed.add_field(
+                name="Players who had joined",
+                value="\n".join(joined_mentions[:10]),
+                inline=False
+            )
+            
+        # Create a new view with disabled buttons
+        new_view = discord.ui.View()
+        button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
+                                   emoji="✅", disabled=True)
+        button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
+                                   emoji="❌", disabled=True)
+        new_view.add_item(button1)
+        new_view.add_item(button2)
+            
+        await interaction.response.edit_message(embed=embed, view=new_view)
+        
         # Clean up from active views
         if hasattr(self.cog, 'active_views') and self.message:
             self.cog.active_views.pop(self.message.id, None)
