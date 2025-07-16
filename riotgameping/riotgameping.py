@@ -101,7 +101,7 @@ class RiotGamePingView(discord.ui.View):
             
         embed = discord.Embed(
             title=f"{emoji} Game: {self.game}",
-            description=f"Looking for people to play **{self.game}**\nStarted by <@{self.author_id}>",
+            # description=f"Looking for people to play **{self.game}**\nStarted by <@{self.author_id}>",
             color=color if players_joined < self.players_needed else discord.Color.green(),
             timestamp=self.created_at  # Use creation time instead of current time
         )
@@ -123,10 +123,11 @@ class RiotGamePingView(discord.ui.View):
             )
             
         # Calculate remaining time based on fixed expiry time
-        remaining_time = self.expiry_time - datetime.utcnow()
-        remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
+        # remaining_time = self.expiry_time - datetime.utcnow()
+        # remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
         
-        embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
+        # embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
+        embed.set_footer(text=f"Expires <t:{int(self.expiry_time.timestamp())}:R>") # Use Discord Relative Timestamp instead
         return embed
         
     async def _game_ready(self, interaction: discord.Interaction):
@@ -142,21 +143,8 @@ class RiotGamePingView(discord.ui.View):
             all_players = [self.author_id] + self.joined_users
             joined_mentions = " ".join([f"<@{uid}>" for uid in all_players])
             
-            # Set emoji based on game
-            emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
-            
-            ready_embed = discord.Embed(
-                title=f"{emoji} Game Ready!",
-                description=f"**{self.game}** is ready to start!",
-                color=discord.Color.green()
-            )
-            ready_embed.add_field(
-                name="Players",
-                value=joined_mentions
-            )
             await channel.send(
-                content=f"{joined_mentions} - Your game is ready!",
-                embed=ready_embed
+                content=f"{joined_mentions} - Your **{self.game}** game is ready!",
             )
             
         # Clean up from active views
