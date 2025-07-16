@@ -303,6 +303,7 @@ class RiotGamePing(commands.Cog):
         # Hardcoded role IDs for Riot games
         self.VALORANT_ROLE_ID = 700130013168664628
         self.LOL_ROLE_ID = 698726804747452456
+        self.QA_ID = 974339999300485180
         
     async def cog_load(self):
         """Called when the cog is loaded"""
@@ -340,6 +341,19 @@ class RiotGamePing(commands.Cog):
     ):
         """Create a League of Legends game ping"""
         await self._create_game_ping(interaction, "League of Legends", players_needed, minutes_till_expiry, self.LOL_ROLE_ID)
+
+    @app_commands.command(name="qa", description="QA ping")
+    @app_commands.describe(players_needed="Number of players needed (default: 4)")
+    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
+    @app_commands.guild_only()
+    async def qa_ping(
+        self,
+        interaction: discord.Interaction,
+        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
+        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
+    ):
+        """Create a QA ping"""
+        await self._create_game_ping(interaction, "QA", players_needed, minutes_till_expiry, self.QA_ID)
         
     async def _create_game_ping(self, interaction: discord.Interaction, game: str, players_needed: int, minutes_till_expiry: int, role_id: int):
         """Create a game ping for the specified game"""
