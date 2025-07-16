@@ -112,6 +112,12 @@ class RiotGamePingView(discord.ui.View):
             inline=True
         )
         
+        embed.add_field(
+            name="Time left",
+            value=f"Expires <t:{int(self.expiry_time.timestamp())}:R>",
+            inline=True
+        )
+        
         # Show joined users in the "Joined" field (author not included in count)
         if self.joined_users:
             joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
@@ -127,7 +133,6 @@ class RiotGamePingView(discord.ui.View):
         # remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
         
         # embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
-        embed.set_footer(text=f"Expires <t:{int(self.expiry_time.timestamp())}:R>") # Use Discord Relative Timestamp instead
         return embed
         
     async def _game_ready(self, interaction: discord.Interaction):
