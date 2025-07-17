@@ -42,7 +42,7 @@ class RiotGamePingView(discord.ui.View):
                 
         return True
         
-    @discord.ui.button(label="Join", style=discord.ButtonStyle.success, emoji="✅")
+    @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
     async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle join button clicks"""
         user_id = interaction.user.id
@@ -68,7 +68,7 @@ class RiotGamePingView(discord.ui.View):
             # Check if the game should have expired
             await self._check_expiry()
             
-    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, emoji="❌", custom_id="cant_join")
+    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, custom_id="cant_join")
     async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Handle can't join button clicks"""
         user_id = interaction.user.id
@@ -137,10 +137,35 @@ class RiotGamePingView(discord.ui.View):
         
     async def _game_ready(self, interaction: discord.Interaction):
         """Handle when game has enough players"""
+        # Cancel the timeout task to prevent on_timeout from being called
+        if self._timeout_task:
+            self._timeout_task.cancel()
+        
         # Disable buttons
         for item in self.children:
             item.disabled = True
-            
+        
+        # Set emoji based on game
+        emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
+        
+        # Create filled embed
+        embed = discord.Embed(
+            title=f"{emoji} Game: {self.game} - FILLED",
+            description="Game is ready to start!",
+            color=discord.Color.green(),
+            timestamp=self.created_at
+        )
+        
+        # Create a new view with disabled buttons
+        new_view = discord.ui.View()
+        button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
+        button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
+        new_view.add_item(button1)
+        new_view.add_item(button2)
+        
+        # Update the original message with the filled embed
+        await interaction.edit_original_response(embed=embed, view=new_view)
+        
         # Send ready message
         channel = interaction.channel
         if channel:
