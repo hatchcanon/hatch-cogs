@@ -18,7 +18,7 @@ class RiotGamePingView(discord.ui.View):
         self.game = game
         self.players_needed = players_needed
         self.author_id = author_id
-        self.joined_users: List[int] = []  # Don't auto-add the creator
+        self.joined_users: List[int] = [author_id]  # Auto-add the creator
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
         self.minutes_till_expiry = minutes_till_expiry
@@ -31,9 +31,9 @@ class RiotGamePingView(discord.ui.View):
         # Check which button was clicked
         custom_id = interaction.data.get("custom_id", "")
         
-        # If it's the can't anymore button, check if user has joined OR is the author
+        # If it's the can't anymore button, check if user has joined
         if "cant_join" in custom_id:
-            if interaction.user.id not in self.joined_users and interaction.user.id != self.author_id:
+            if interaction.user.id not in self.joined_users:
                 await interaction.response.send_message(
                     "You need to join the game first before you can leave!",
                     ephemeral=True
@@ -61,8 +61,8 @@ class RiotGamePingView(discord.ui.View):
         embed = await self._create_embed()
         await interaction.response.edit_message(embed=embed, view=self)
         
-        # Check if we have enough players (not including the author)
-        if len(self.joined_users) >= self.players_needed:
+        # Check if we have enough players (including the author, so +1)
+        if len(self.joined_users) >= self.players_needed + 1:
             await self._game_ready(interaction)
         else:
             # Check if the game should have expired
@@ -88,8 +88,8 @@ class RiotGamePingView(discord.ui.View):
             
     async def _create_embed(self) -> discord.Embed:
         """Create the embed for the game ping message"""
-        # Only count joined users, not the author
-        players_joined = len(self.joined_users)
+        # Count all joined users (including the author)
+        players_joined = len(self.joined_users) - 1  # Subtract 1 to show additional players needed
         
         # Set color and emoji based on game
         if self.game == "Valorant":
@@ -118,7 +118,7 @@ class RiotGamePingView(discord.ui.View):
             inline=True
         )
         
-        # Show joined users in the "Joined" field (author not included in count)
+        # Show joined users in the "Joined" field (author is included in the list)
         if self.joined_users:
             joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
             embed.add_field(
@@ -169,8 +169,8 @@ class RiotGamePingView(discord.ui.View):
         # Send ready message
         channel = interaction.channel
         if channel:
-            # Include both author and joined users in the ready message
-            all_players = [self.author_id] + self.joined_users
+            # All players are already in joined_users (including author)
+            all_players = self.joined_users
             joined_mentions = " ".join([f"<@{uid}>" for uid in all_players])
             
             await channel.send(
@@ -280,8 +280,8 @@ class RiotGamePingView(discord.ui.View):
                 timestamp=self.created_at  # Use creation time for consistency
             )
             
-            # Show both author and joined users in timeout message
-            all_players = [self.author_id] + self.joined_users
+            # All players are already in joined_users (including author)
+            all_players = self.joined_users
             if all_players:
                 joined_mentions = [f"<@{uid}>" for uid in all_players]
                 embed.add_field(
@@ -292,10 +292,8 @@ class RiotGamePingView(discord.ui.View):
                 
             # Create a new view with disabled buttons
             new_view = discord.ui.View()
-            button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
-                                       emoji="✅", disabled=True)
-            button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
-                                       emoji="❌", disabled=True)
+            button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
+            button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, disabled=True)
             new_view.add_item(button1)
             new_view.add_item(button2)
                 
@@ -414,8 +412,8 @@ class RiotGamePing(commands.Cog):
         # Track the view
         self.active_views[view.message.id] = view
         
-        # Check if game is already ready (e.g., 1 player game)
-        if players_needed == 1:
+        # Check if game is already ready (e.g., 0 additional players needed)
+        if players_needed == 0:
             await view._game_ready(interaction)
 
 
