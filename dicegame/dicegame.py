@@ -86,7 +86,6 @@ class DiceGameView(discord.ui.View):
                 inline=False
             )
             
-        embed.set_footer(text="Use /dicegame <amount> <animal(s)> to bet!")
         return embed
         
     async def _create_results_embed(self, winning_animals: List[str], payouts: Dict[int, int]) -> discord.Embed:
@@ -164,6 +163,10 @@ class DiceGameView(discord.ui.View):
             # Update message with results
             await self.message.edit(embed=results_embed, view=None)
             
+            # Clean up from active games
+            if hasattr(self, 'cleanup'):
+                self.cleanup()
+            
         except Exception as e:
             log.error(f"Error in dice game timeout: {e}")
             
@@ -191,15 +194,11 @@ class DiceGame(commands.Cog):
         log.info("DiceGame cog unloaded")
         
         
-    async def _handle_timeout(self, game_view: DiceGameView, cleanup_func):
-        """Handle game timeout with cleanup"""
-        await game_view.on_timeout()
-        cleanup_func()
         
     @app_commands.command(name="dicegame", description="Place a bet in the dice game (starts game if needed)")
     @app_commands.describe(
         amount="Amount of credits to bet",
-        animals="Animals to bet on (comma-separated): fish, shrimp, crab, rooster, dragon, tiger"
+        animals="Animals to bet on (space-separated): fish, shrimp, crab, rooster, dragon, tiger"
     )
     @app_commands.guild_only()
     async def place_bet(
@@ -228,34 +227,33 @@ class DiceGame(commands.Cog):
             self.active_games[channel_id] = game_view
             game_started_now = True
             
-            # Remove from active games when done
-            def cleanup():
-                self.active_games.pop(channel_id, None)
-                
-            game_view.on_timeout = lambda: asyncio.create_task(self._handle_timeout(game_view, cleanup))
+            # Store cleanup function for later use
+            game_view.cleanup = lambda: self.active_games.pop(channel_id, None)
             
         game_view = self.active_games[channel_id]
         user_id = interaction.user.id
         
-        # Parse animals
-        animal_list = [animal.strip().lower() for animal in animals.split(",")]
+        # Parse animals (split by spaces instead of commas)
+        animal_list = [animal.strip().lower() for animal in animals.split()]
         valid_animals = []
         
         for animal in animal_list:
             if animal in game_view.animals:
                 valid_animals.append(animal)
             else:
-                await interaction.response.send_message(
-                    f"Invalid animal: {animal}. Valid animals are: {', '.join(game_view.animals)}",
-                    ephemeral=True
-                )
+                error_msg = f"Invalid animal: {animal}. Valid animals are: {', '.join(game_view.animals)}"
+                if game_started_now:
+                    await interaction.followup.send(error_msg, ephemeral=True)
+                else:
+                    await interaction.response.send_message(error_msg, ephemeral=True)
                 return
                 
         if not valid_animals:
-            await interaction.response.send_message(
-                "No valid animals specified!",
-                ephemeral=True
-            )
+            error_msg = "No valid animals specified!"
+            if game_started_now:
+                await interaction.followup.send(error_msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(error_msg, ephemeral=True)
             return
             
         # Check if user has enough credits
@@ -264,20 +262,22 @@ class DiceGame(commands.Cog):
             total_bet = amount * len(valid_animals)
             
             if user_balance < total_bet:
-                await interaction.response.send_message(
-                    f"Insufficient credits! You have {user_balance} credits but need {total_bet}.",
-                    ephemeral=True
-                )
+                error_msg = f"Insufficient credits! You have {user_balance} credits but need {total_bet}."
+                if game_started_now:
+                    await interaction.followup.send(error_msg, ephemeral=True)
+                else:
+                    await interaction.response.send_message(error_msg, ephemeral=True)
                 return
                 
             # Withdraw the bet amount
             await bank.withdraw_credits(interaction.user, total_bet)
             
         except Exception as e:
-            await interaction.response.send_message(
-                f"Error accessing your balance: {e}",
-                ephemeral=True
-            )
+            error_msg = f"Error accessing your balance: {e}"
+            if game_started_now:
+                await interaction.followup.send(error_msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(error_msg, ephemeral=True)
             return
             
         # Add bets
