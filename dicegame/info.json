@@ -1,0 +1,19 @@
+{
+    "name": "DiceGame",
+    "author": ["hatch"],
+    "description": "Animal dice betting game with 30-second betting rounds",
+    "install_msg": "Thanks for installing DiceGame! Make sure to sync slash commands with `[p]slash sync`!",
+    "short": "Animal dice betting game",
+    "min_bot_version": "3.5.0",
+    "min_python_version": [3, 8, 0],
+    "type": "COG",
+    "requirements": [],
+    "tags": [
+        "gaming",
+        "gambling",
+        "dice",
+        "betting",
+        "slash"
+    ],
+    "end_user_data_statement": "This cog stores Discord user IDs temporarily during active dice games to track player bets and balances. This data is only kept in memory during the 30-second betting duration and is not permanently stored. All balance data is handled through Red-DiscordBot's built-in bank system."
+}
