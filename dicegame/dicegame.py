@@ -17,6 +17,7 @@ class DiceGameView(discord.ui.View):
         super().__init__(timeout=30)
         self.cog = cog
         self.bets: Dict[int, Dict[str, int]] = {}  # user_id -> {animal: amount}
+        self.users: Dict[int, discord.User] = {}  # user_id -> user object
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
         self.created_at = datetime.utcnow()
@@ -102,7 +103,15 @@ class DiceGameView(discord.ui.View):
             winners_text = ""
             total_payout = 0
             for user_id, payout in payouts.items():
-                winners_text += f"<@{user_id}>: +{payout} credits\n"
+                # Show winner's bet details
+                user_bets = self.bets.get(user_id, {})
+                bet_details = []
+                for animal, amount in user_bets.items():
+                    if animal in winning_animals:
+                        bet_details.append(f"{amount} on {animal}")
+                
+                bet_info = f"{', '.join(bet_details)}" if bet_details else ""
+                winners_text += f"<@{user_id}>: +{payout} credits{bet_info}\n"
                 total_payout += payout
                 
             embed.add_field(
@@ -151,9 +160,12 @@ class DiceGameView(discord.ui.View):
             # Award payouts
             for user_id, payout in payouts.items():
                 try:
-                    user = self.bot.get_user(user_id)
+                    user = self.users.get(user_id)
                     if user:
                         await bank.deposit_credits(user, payout)
+                        log.debug(f"Awarded {payout} credits to user {user_id}")
+                    else:
+                        log.error(f"Could not find user {user_id} to award payout")
                 except Exception as e:
                     log.error(f"Error awarding payout to user {user_id}: {e}")
                     
@@ -280,9 +292,11 @@ class DiceGame(commands.Cog):
                 await interaction.response.send_message(error_msg, ephemeral=True)
             return
             
-        # Add bets
+        # Add bets and store user object
         if user_id not in game_view.bets:
             game_view.bets[user_id] = {}
+            
+        game_view.users[user_id] = interaction.user
             
         for animal in valid_animals:
             if animal in game_view.bets[user_id]:
