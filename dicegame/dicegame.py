@@ -33,7 +33,7 @@ class DiceGameView(discord.ui.View):
         """Create the embed for the dice game"""
         embed = discord.Embed(
             title="🎲 Animal Dice Game",
-            description="Place your bets! Game starts in 30 seconds.",
+            description="Place your bets! Game ends in 30 seconds.",
             color=discord.Color.gold(),
         )
         
@@ -96,12 +96,12 @@ class DiceGameView(discord.ui.View):
                 # Show winner's bet details
                 user_bets = self.bets.get(user_id, {})
                 bet_details = []
-                for animal in user_bets.items():
+                for animal, amount in user_bets.items():
                     if animal in winning_animals:
-                        bet_details.append(f" {animal}")
+                        bet_details.append(animal)
                 
                 bet_info = f"{', '.join(bet_details)}" if bet_details else ""
-                winners_text += f"<@{user_id}>: +{payout} credits{bet_info}\n"
+                winners_text += f"<@{user_id}>: +{payout} credits {bet_info}\n"
                 total_payout += payout
                 
             embed.add_field(
@@ -200,7 +200,7 @@ class DiceGame(commands.Cog):
     @app_commands.command(name="dicegame", description="Place a bet in the dice game (starts game if needed)")
     @app_commands.describe(
         amount="Amount of credits to bet",
-        animals="Animals to bet on (space-separated): fish, shrimp, crab, rooster, dragon, tiger"
+        animals="Animals to bet on (space-separated): fish, shrimp, crab, cock, dragon, tiger"
     )
     @app_commands.guild_only()
     async def place_bet(
