@@ -2,7 +2,6 @@ import discord
 from redbot.core import commands, app_commands, bank
 from redbot.core.bot import Red
 import asyncio
-from datetime import datetime, timedelta
 from typing import Optional, Dict, List, Set
 import logging
 import random
@@ -20,14 +19,12 @@ class DiceGameView(discord.ui.View):
         self.users: Dict[int, discord.User] = {}  # user_id -> user object
         self.message: Optional[discord.Message] = None
         self.bot = cog.bot
-        self.created_at = datetime.utcnow()
-        self.expiry_time = self.created_at + timedelta(seconds=30)
-        self.animals = ["fish", "shrimp", "crab", "rooster", "dragon", "tiger"]
+        self.animals = ["fish", "shrimp", "crab", "cock", "dragon", "tiger"]
         self.animal_emojis = {
             "fish": "🐟",
             "shrimp": "🦐", 
             "crab": "🦀",
-            "rooster": "🐓",
+            "cock": "🐓",
             "dragon": "🐉",
             "tiger": "🐅"
         }
@@ -38,14 +35,8 @@ class DiceGameView(discord.ui.View):
             title="🎲 Animal Dice Game",
             description="Place your bets! Game starts in 30 seconds.",
             color=discord.Color.gold(),
-            timestamp=self.created_at
         )
         
-        embed.add_field(
-            name="Time left",
-            value=f"Ends <t:{int(self.expiry_time.timestamp())}:R>",
-            inline=True
-        )
         
         # Show current bets
         if self.bets:
@@ -96,7 +87,6 @@ class DiceGameView(discord.ui.View):
             title="🎲 Dice Game Results!",
             description=f"Winning animals: {' '.join(winning_emojis)} **{', '.join([animal.title() for animal in winning_animals])}**",
             color=discord.Color.green(),
-            timestamp=datetime.utcnow()
         )
         
         if payouts:
@@ -106,9 +96,9 @@ class DiceGameView(discord.ui.View):
                 # Show winner's bet details
                 user_bets = self.bets.get(user_id, {})
                 bet_details = []
-                for animal, amount in user_bets.items():
+                for animal in user_bets.items():
                     if animal in winning_animals:
-                        bet_details.append(f"{amount} on {animal}")
+                        bet_details.append(f" {animal}")
                 
                 bet_info = f"{', '.join(bet_details)}" if bet_details else ""
                 winners_text += f"<@{user_id}>: +{payout} credits{bet_info}\n"
