@@ -150,21 +150,21 @@ class RiotGamePingView(discord.ui.View):
         
         # Create filled embed
         embed = discord.Embed(
-            title=f"{emoji} Game: {self.game} - FILLED",
+            title=f"{emoji} {self.game} - FILLED",
             description="Game is ready to start!",
             color=discord.Color.green(),
             timestamp=self.created_at
         )
         
         # Create a new view with disabled buttons
-        new_view = discord.ui.View()
-        button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
-        button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
-        new_view.add_item(button1)
-        new_view.add_item(button2)
+        # new_view = discord.ui.View()
+        # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
+        # button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
+        # new_view.add_item(button1)
+        # new_view.add_item(button2)
         
         # Update the original message with the filled embed
-        await interaction.edit_original_response(embed=embed, view=new_view)
+        await interaction.edit_original_response(embed=embed)
         
         # Send ready message
         channel = interaction.channel
@@ -234,15 +234,13 @@ class RiotGamePingView(discord.ui.View):
             )
             
         # Create a new view with disabled buttons
-        new_view = discord.ui.View()
-        button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, 
-                                   emoji="✅", disabled=True)
-        button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, 
-                                   emoji="❌", disabled=True)
-        new_view.add_item(button1)
-        new_view.add_item(button2)
+        # new_view = discord.ui.View()
+        # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
+        # button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
+        # new_view.add_item(button1)
+        # new_view.add_item(button2)
             
-        await interaction.response.edit_message(embed=embed, view=new_view)
+        await interaction.response.edit_message(embed=embed)
         
         # Clean up from active views
         if hasattr(self.cog, 'active_views') and self.message:
@@ -274,7 +272,7 @@ class RiotGamePingView(discord.ui.View):
             emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
                 
             embed = discord.Embed(
-                title=f"{emoji} Game: {self.game} - CANCELLED",
+                title=f"{emoji} {self.game} - CANCELLED",
                 description="Not enough players joined in time. Game cancelled.",
                 color=discord.Color.red(),
                 timestamp=self.created_at  # Use creation time for consistency
@@ -291,13 +289,13 @@ class RiotGamePingView(discord.ui.View):
                 )
                 
             # Create a new view with disabled buttons
-            new_view = discord.ui.View()
-            button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
-            button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, disabled=True)
-            new_view.add_item(button1)
-            new_view.add_item(button2)
+            # new_view = discord.ui.View()
+            # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
+            # button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, disabled=True)
+            # new_view.add_item(button1)
+            # new_view.add_item(button2)
                 
-            await self.message.edit(embed=embed, view=new_view)
+            await self.message.edit(embed=embed)
             log.info(f"Game ping for {self.game} timed out and was cancelled")
             
             # Clean up from active views
