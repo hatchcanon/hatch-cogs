@@ -156,15 +156,8 @@ class RiotGamePingView(discord.ui.View):
             timestamp=self.created_at
         )
         
-        # Create a new view with disabled buttons
-        # new_view = discord.ui.View()
-        # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
-        # button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
-        # new_view.add_item(button1)
-        # new_view.add_item(button2)
-        
-        # Update the original message with the filled embed
-        await interaction.edit_original_response(embed=embed)
+        # Update the original message with the filled embed (no buttons)
+        await interaction.edit_original_response(embed=embed, view=None)
         
         # Send ready message
         channel = interaction.channel
@@ -233,14 +226,7 @@ class RiotGamePingView(discord.ui.View):
                 inline=False
             )
             
-        # Create a new view with disabled buttons
-        # new_view = discord.ui.View()
-        # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
-        # button2 = discord.ui.Button(label="Can't", style=discord.ButtonStyle.danger, disabled=True)
-        # new_view.add_item(button1)
-        # new_view.add_item(button2)
-            
-        await interaction.response.edit_message(embed=embed)
+        await interaction.response.edit_message(embed=embed, view=None)
         
         # Clean up from active views
         if hasattr(self.cog, 'active_views') and self.message:
@@ -288,14 +274,7 @@ class RiotGamePingView(discord.ui.View):
                     inline=False
                 )
                 
-            # Create a new view with disabled buttons
-            # new_view = discord.ui.View()
-            # button1 = discord.ui.Button(label="Join", style=discord.ButtonStyle.success, disabled=True)
-            # button2 = discord.ui.Button(label="Can't Anymore", style=discord.ButtonStyle.danger, disabled=True)
-            # new_view.add_item(button1)
-            # new_view.add_item(button2)
-                
-            await self.message.edit(embed=embed)
+            await self.message.edit(embed=embed, view=None)
             log.info(f"Game ping for {self.game} timed out and was cancelled")
             
             # Clean up from active views
