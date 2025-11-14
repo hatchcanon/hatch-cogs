@@ -139,12 +139,8 @@ class AdventureHelperListeners(MixinMeta):
             color = discord.Color.blue()
 
         embed = discord.Embed(
+            description=analysis["recommendation"],
             color=color,
-        )
-        # Add recommendation
-        embed.add_field(
-            value=analysis["recommendation"],
-            inline=False,
         )
 
         # Send the embed
