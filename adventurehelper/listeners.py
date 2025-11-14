@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 import discord
@@ -20,26 +21,31 @@ class AdventureHelperListeners(MixinMeta):
         with open(attribs_path) as f:
             self.attribs = json.load(f)
 
-    def analyze_adventure(self, attribute: str) -> dict:
+    def analyze_adventure(self, message_content: str) -> dict:
         """
-        Analyze the adventure attribute to provide recommendations
+        Analyze the adventure message to determine monster attributes and provide recommendations
         Returns dict with: attribute, attack_defense, talk_defense, recommendation, action
-
-        Args:
-            attribute: The attribute string from the game session (e.g., " possessed", "n immortal")
         """
-        # Look up the attribute directly in our attribs dict
-        if attribute not in self.attribs:
+        # Find which attribute is in the message
+        found_attrib = None
+        for attrib_key in self.attribs.keys():
+            # Create pattern that handles "a" or "an" prefix
+            pattern = re.compile(r"\ba" + re.escape(attrib_key) + r"\b", re.IGNORECASE)
+            if pattern.search(message_content):
+                found_attrib = attrib_key
+                break
+
+        if not found_attrib:
             return None
 
         # Get the modifiers [attack_defense, talk_defense]
-        attack_defense, talk_defense = self.attribs[attribute]
+        attack_defense, talk_defense = self.attribs[found_attrib]
 
         # Determine recommendation based on modifiers
         recommendation, action = self._get_recommendation(attack_defense, talk_defense)
 
         return {
-            "attribute": attribute.strip(),
+            "attribute": found_attrib.strip(),
             "attack_defense": attack_defense,
             "talk_defense": talk_defense,
             "recommendation": recommendation,
@@ -104,14 +110,8 @@ class AdventureHelperListeners(MixinMeta):
 
         return recommendation, action
 
-    async def send_adventure_help(self, session) -> None:
-        """Send strategic guidance for the adventure
-
-        Args:
-            session: The GameSession object from the adventure cog
-        """
-        ctx = session.ctx
-
+    async def send_adventure_help(self, ctx: commands.Context) -> None:
+        """Send strategic guidance for the adventure"""
         if await self.bot.cog_disabled_in_guild(self, ctx.guild):
             return
         if ctx.guild is None:
@@ -122,8 +122,8 @@ class AdventureHelperListeners(MixinMeta):
         if not enabled:
             return
 
-        # Analyze the adventure using the attribute from the session
-        analysis = self.analyze_adventure(session.attribute)
+        # Analyze the adventure message
+        analysis = self.analyze_adventure(ctx.message.content)
 
         if not analysis:
             # No recognized attribute found
@@ -151,36 +151,36 @@ class AdventureHelperListeners(MixinMeta):
         await ctx.channel.send(embed=embed)
 
     @commands.Cog.listener()
-    async def on_adventure(self, session) -> None:
+    async def on_adventure(self, ctx: commands.Context) -> None:
         """Listen for adventure events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_miniboss(self, session) -> None:
+    async def on_adventure_miniboss(self, ctx: commands.Context) -> None:
         """Listen for miniboss events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_boss(self, session) -> None:
+    async def on_adventure_boss(self, ctx: commands.Context) -> None:
         """Listen for boss events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_ascended(self, session) -> None:
+    async def on_adventure_ascended(self, ctx: commands.Context) -> None:
         """Listen for ascended events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_transcended(self, session) -> None:
+    async def on_adventure_transcended(self, ctx: commands.Context) -> None:
         """Listen for transcended events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_immortal(self, session) -> None:
+    async def on_adventure_immortal(self, ctx: commands.Context) -> None:
         """Listen for immortal events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
 
     @commands.Cog.listener()
-    async def on_adventure_possessed(self, session) -> None:
+    async def on_adventure_possessed(self, ctx: commands.Context) -> None:
         """Listen for possessed events and provide guidance"""
-        await self.send_adventure_help(session)
+        await self.send_adventure_help(ctx)
