@@ -139,64 +139,13 @@ class AdventureHelperListeners(MixinMeta):
             color = discord.Color.blue()
 
         embed = discord.Embed(
-            title="Adventure Strategy Guide",
             color=color,
         )
-
-        # Add attribute info
-        attrib_name = analysis["attribute"].replace("n ", "").replace(" ", "").title()
-        embed.add_field(
-            name="Enemy Type",
-            value=f"**{attrib_name}**",
-            inline=True,
-        )
-
-        # Add recommended action prominently
-        action_emoji = {
-            "Attack": "⚔️",
-            "Talk": "💬",
-            "Either": "🤷"
-        }
-        embed.add_field(
-            name="Recommended Action",
-            value=f"{action_emoji[analysis['action']]} **{analysis['action']}**",
-            inline=True,
-        )
-
-        # Add spacer for layout
-        embed.add_field(name="\u200b", value="\u200b", inline=True)
-
-        # Add defense modifiers
-        embed.add_field(
-            name="⚔️ Attack Defense",
-            value=f"`{analysis['attack_defense']}x`",
-            inline=True,
-        )
-        embed.add_field(
-            name="💬 Talk Defense",
-            value=f"`{analysis['talk_defense']}x`",
-            inline=True,
-        )
-
-        # Add advantage calculation
-        advantage = abs(analysis["attack_defense"] - analysis["talk_defense"])
-        if analysis["action"] != "Either":
-            embed.add_field(
-                name="Advantage",
-                value=f"`+{advantage:.2f}`",
-                inline=True,
-            )
-        else:
-            embed.add_field(name="\u200b", value="\u200b", inline=True)
-
         # Add recommendation
         embed.add_field(
-            name="💡 Strategy",
             value=analysis["recommendation"],
             inline=False,
         )
-
-        embed.set_footer(text="Lower defense values = easier to succeed")
 
         # Send the embed
         await ctx.channel.send(embed=embed)
