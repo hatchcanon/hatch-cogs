@@ -1,0 +1,30 @@
+{
+    "author": [
+        "Nathan"
+    ],
+    "description": "Provides strategic guidance for adventure encounters based on enemy attributes",
+    "disabled": false,
+    "end_user_data_statement": "This cog does not store any user data.",
+    "hidden": false,
+    "install_msg": "Thank you for installing AdventureHelper! Make sure you're running the latest version of adventure from https://github.com/aikaterna/gobcog. Use `[p]adventurehelper toggle` to enable/disable the helper in your server.",
+    "max_bot_version": "0.0.0",
+    "min_bot_version": "3.5.0",
+    "min_python_version": [
+        3,
+        7,
+        2
+    ],
+    "name": "AdventureHelper",
+    "permissions": [],
+    "required_cogs": {
+        "adventure": "https://github.com/aikaterna/gobcog/"
+    },
+    "requirements": [],
+    "short": "Strategic guidance for adventure encounters",
+    "tags": [
+        "fun",
+        "adventure",
+        "helper"
+    ],
+    "type": "COG"
+}
