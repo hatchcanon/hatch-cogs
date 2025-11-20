@@ -226,35 +226,10 @@ class AdventureHelperListeners(MixinMeta):
 
     @commands.Cog.listener()
     async def on_adventure(self, session) -> None:
-        """Listen for adventure events and provide guidance"""
-        await self.send_adventure_help(session)
+        """Listen for adventure events and provide guidance
 
-    @commands.Cog.listener()
-    async def on_adventure_miniboss(self, session) -> None:
-        """Listen for miniboss events and provide guidance"""
-        await self.send_adventure_help(session)
-
-    @commands.Cog.listener()
-    async def on_adventure_boss(self, session) -> None:
-        """Listen for boss events and provide guidance"""
-        await self.send_adventure_help(session)
-
-    @commands.Cog.listener()
-    async def on_adventure_ascended(self, session) -> None:
-        """Listen for ascended events and provide guidance"""
-        await self.send_adventure_help(session)
-
-    @commands.Cog.listener()
-    async def on_adventure_transcended(self, session) -> None:
-        """Listen for transcended events and provide guidance"""
-        await self.send_adventure_help(session)
-
-    @commands.Cog.listener()
-    async def on_adventure_immortal(self, session) -> None:
-        """Listen for immortal events and provide guidance"""
-        await self.send_adventure_help(session)
-
-    @commands.Cog.listener()
-    async def on_adventure_possessed(self, session) -> None:
-        """Listen for possessed events and provide guidance"""
+        Note: We only listen to on_adventure since it always fires.
+        Other events (boss, miniboss, etc.) fire in addition to this one,
+        which would cause duplicate embeds.
+        """
         await self.send_adventure_help(session)
