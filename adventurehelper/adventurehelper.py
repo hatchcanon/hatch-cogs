@@ -30,7 +30,7 @@ class AdventureHelper(
 ):
     """Provide strategic guidance for adventure encounters based on enemy attributes"""
 
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
     __author__ = ["hatch"]
 
     def __init__(self, bot):

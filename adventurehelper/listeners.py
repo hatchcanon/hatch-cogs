@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 
@@ -104,6 +105,80 @@ class AdventureHelperListeners(MixinMeta):
 
         return recommendation, action
 
+    def _format_participants(self, session) -> str:
+        """Format the participant list showing who joined and their actions.
+
+        Args:
+            session: The GameSession object from the adventure cog
+
+        Returns:
+            Formatted string of participants grouped by action
+        """
+        lines = []
+
+        # Map action lists to display names and emojis
+        actions = [
+            ("fight", "\N{DAGGER KNIFE}\N{VARIATION SELECTOR-16}", "Fight"),
+            ("magic", "\N{SPARKLES}", "Magic"),
+            ("talk", "\N{LEFT SPEECH BUBBLE}\N{VARIATION SELECTOR-16}", "Talk"),
+            ("pray", "\N{PERSON WITH FOLDED HANDS}", "Pray"),
+            ("run", "\N{RUNNER}\N{ZERO WIDTH JOINER}\N{MALE SIGN}\N{VARIATION SELECTOR-16}", "Run"),
+        ]
+
+        for attr, emoji, label in actions:
+            members = getattr(session, attr, [])
+            if members:
+                names = ", ".join(m.display_name for m in members)
+                lines.append(f"{emoji} **{label}** ({len(members)}): {names}")
+
+        return "\n".join(lines) if lines else ""
+
+    async def _update_embed_task(self, session, message: discord.Message, analysis: dict) -> None:
+        """Background task to update the embed with participant info.
+
+        Args:
+            session: The GameSession object from the adventure cog
+            message: The sent embed message to update
+            analysis: The adventure analysis dict
+        """
+        # Set embed color based on recommended action
+        if analysis["action"] == "Attack":
+            color = discord.Color.red()
+        elif analysis["action"] == "Talk":
+            color = discord.Color.green()
+        else:
+            color = discord.Color.blue()
+
+        last_participants = ""
+
+        while not session.finished:
+            await asyncio.sleep(2)  # Check every 2 seconds
+
+            # Format current participants
+            participants = self._format_participants(session)
+
+            # Only update if participants changed
+            if participants != last_participants:
+                last_participants = participants
+
+                embed = discord.Embed(
+                    description=analysis["recommendation"],
+                    color=color,
+                )
+
+                if participants:
+                    embed.add_field(
+                        name=_("Participants"),
+                        value=participants,
+                        inline=False
+                    )
+
+                try:
+                    await message.edit(embed=embed)
+                except discord.HTTPException:
+                    # Message was deleted or we lost permissions
+                    break
+
     async def send_adventure_help(self, session) -> None:
         """Send strategic guidance for the adventure
 
@@ -144,7 +219,10 @@ class AdventureHelperListeners(MixinMeta):
         )
 
         # Send the embed
-        await ctx.channel.send(embed=embed)
+        message = await ctx.channel.send(embed=embed)
+
+        # Start background task to update with participant info
+        self.bot.loop.create_task(self._update_embed_task(session, message, analysis))
 
     @commands.Cog.listener()
     async def on_adventure(self, session) -> None:
