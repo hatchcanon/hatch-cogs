@@ -149,7 +149,17 @@ Stat Change: -2 Charisma"""
 
             # Extract the text from Gemini's response
             if 'candidates' in data and len(data['candidates']) > 0:
-                text = data['candidates'][0]['content']['parts'][0]['text']
+                candidate = data['candidates'][0]
+
+                # Check if content was blocked or has no parts
+                if 'content' not in candidate or 'parts' not in candidate.get('content', {}):
+                    finish_reason = candidate.get('finishReason', 'UNKNOWN')
+                    log.warning(f"Gemini response missing content/parts. Finish reason: {finish_reason}")
+                    if finish_reason == 'SAFETY':
+                        return "The response was blocked by safety filters. Try again with a different item!"
+                    return f"Error: Gemini returned an incomplete response (reason: {finish_reason}). Try again!"
+
+                text = candidate['content']['parts'][0]['text']
                 return text.strip()
             else:
                 return "Error: Could not generate a response from Gemini."
