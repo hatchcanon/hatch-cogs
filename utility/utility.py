@@ -158,41 +158,6 @@ Stat Change: -2 Charisma"""
             log.error(f"Error calling Gemini API: {e}")
             return f"Error: Could not connect to Gemini API. {str(e)}"
 
-
-class WompActionView(discord.ui.View):
-    """View with buttons for womp actions"""
-
-    def __init__(self, cog, adjective: str, noun: str, verb: str):
-        super().__init__(timeout=60.0)
-        self.cog = cog
-        self.adjective = adjective
-        self.noun = noun
-        self.verb = verb
-
-        # Update the first button label with the random verb
-        self.children[0].label = f"{verb.capitalize()} it"
-
-    @discord.ui.button(label="Verb it", style=discord.ButtonStyle.primary)
-    async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb)
-        await interaction.followup.send(response)
-        self.stop()
-
-    @discord.ui.button(label="Sell it", style=discord.ButtonStyle.success)
-    async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb)
-        await interaction.followup.send(response)
-        self.stop()
-
-    @discord.ui.button(label="Equip it", style=discord.ButtonStyle.danger)
-    async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb)
-        await interaction.followup.send(response)
-        self.stop()
-
     @commands.group(name="womp")
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
@@ -251,6 +216,41 @@ class WompActionView(discord.ui.View):
         phrase, adjective, noun, verb = result
         view = WompActionView(self, adjective, noun, verb)
         await interaction.response.send_message(phrase, view=view)
+
+
+class WompActionView(discord.ui.View):
+    """View with buttons for womp actions"""
+
+    def __init__(self, cog, adjective: str, noun: str, verb: str):
+        super().__init__(timeout=60.0)
+        self.cog = cog
+        self.adjective = adjective
+        self.noun = noun
+        self.verb = verb
+
+        # Update the first button label with the random verb
+        self.children[0].label = f"{verb.capitalize()} it"
+
+    @discord.ui.button(label="Verb it", style=discord.ButtonStyle.primary)
+    async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb)
+        await interaction.followup.send(response)
+        self.stop()
+
+    @discord.ui.button(label="Sell it", style=discord.ButtonStyle.success)
+    async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb)
+        await interaction.followup.send(response)
+        self.stop()
+
+    @discord.ui.button(label="Equip it", style=discord.ButtonStyle.danger)
+    async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb)
+        await interaction.followup.send(response)
+        self.stop()
 
 
 async def setup(bot: Red):
