@@ -162,7 +162,7 @@ Stat Change: -2 Charisma"""
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use `[p]womp forage` to go foraging, `[p]womp api <key>` to set your Words API key, or `[p]womp geminiapi <key>` to set your Gemini API key!")
+            await ctx.send("Use `[p]womp forage` to go foraging, `[p]womp wordsapi <key>` to set your Words API key, or `[p]womp geminiapi <key>` to set your Gemini API key!")
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
@@ -178,7 +178,7 @@ Stat Change: -2 Charisma"""
         view = WompActionView(self, adjective, noun, verb)
         await ctx.send(phrase, view=view)
 
-    @womp_group.command(name="api")
+    @womp_group.command(name="wordsapi")
     @commands.is_owner()
     async def womp_api(self, ctx: commands.Context, api_key: str):
         """Set the Words API key for womp foraging"""
@@ -231,8 +231,15 @@ class WompActionView(discord.ui.View):
         # Update the first button label with the random verb
         self.children[0].label = f"{verb.capitalize()} it"
 
+    async def disable_all_buttons(self, interaction: discord.Interaction):
+        """Disable all buttons and update the message"""
+        for child in self.children:
+            child.disabled = True
+        await interaction.message.edit(view=self)
+
     @discord.ui.button(label="Verb it", style=discord.ButtonStyle.primary)
     async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb)
         await interaction.followup.send(response)
@@ -240,6 +247,7 @@ class WompActionView(discord.ui.View):
 
     @discord.ui.button(label="Sell it", style=discord.ButtonStyle.success)
     async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb)
         await interaction.followup.send(response)
@@ -247,6 +255,7 @@ class WompActionView(discord.ui.View):
 
     @discord.ui.button(label="Equip it", style=discord.ButtonStyle.danger)
     async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb)
         await interaction.followup.send(response)
