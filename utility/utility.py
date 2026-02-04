@@ -3,6 +3,7 @@ from redbot.core import commands, app_commands, Config
 from redbot.core.bot import Red
 import logging
 import requests
+import asyncio
 
 log = logging.getLogger("red.utility")
 
@@ -29,12 +30,13 @@ class Utility(commands.Cog):
         """Called when the cog is unloaded"""
         log.info("Utility cog unloaded")
 
-    async def get_random_word(self, part_of_speech: str) -> str:
+    async def get_random_word(self, part_of_speech: str, type_of: str = None) -> str:
         """
         Fetch a random word of the specified part of speech from Words API.
 
         Args:
             part_of_speech: 'adjective', 'noun', or 'verb'
+            type_of: Optional type filter (e.g., 'object', 'action')
 
         Returns:
             A random word string, or None if the request fails
@@ -44,6 +46,8 @@ class Utility(commands.Cog):
             return None
 
         url = f"https://wordsapiv1.p.rapidapi.com/words?partOfSpeech={part_of_speech}&random=true"
+        if type_of:
+            url += f"&typeOf={type_of}"
 
         headers = {
             "X-Mashape-Key": api_key,
@@ -73,8 +77,8 @@ class Utility(commands.Cog):
 
         # Fetch random words
         adjective = await self.get_random_word('adjective')
-        noun = await self.get_random_word('noun')
-        verb = await self.get_random_word('verb')
+        noun = await self.get_random_word('noun', type_of='object')
+        verb = await self.get_random_word('verb', type_of='action')
 
         # Check if all words were successfully retrieved
         if not all([adjective, noun, verb]):
@@ -84,7 +88,7 @@ class Utility(commands.Cog):
         phrase = f"Womp goes foraging and finds you a {adjective} {noun}. Would you like to {verb} it, sell it, or equip it?"
         return phrase, adjective, noun, verb
 
-    async def get_gemini_response(self, action: str, adjective: str, noun: str, verb: str) -> str:
+    async def get_gemini_response(self, action: str, adjective: str, noun: str, verb: str, interaction: discord.Interaction = None) -> str:
         """
         Call Gemini API to generate a D&D-style narrative response.
 
@@ -93,6 +97,7 @@ class Utility(commands.Cog):
             adjective: The item's adjective
             noun: The item's noun
             verb: The random verb generated
+            interaction: Optional interaction for sending retry messages
 
         Returns:
             A narrative response with stat changes, or an error message
@@ -142,31 +147,44 @@ Stat Change: -2 Charisma"""
             }]
         }
 
-        try:
-            response = requests.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, headers=headers, json=payload)
 
-            # Extract the text from Gemini's response
-            if 'candidates' in data and len(data['candidates']) > 0:
-                candidate = data['candidates'][0]
+                # Check for 503 error and retry
+                if response.status_code == 503 and attempt < max_retries - 1:
+                    log.warning(f"Gemini API returned 503, retrying in 5 seconds...")
+                    if interaction:
+                        await interaction.followup.send("Retrying...")
+                    await asyncio.sleep(5)
+                    continue
 
-                # Check if content was blocked or has no parts
-                if 'content' not in candidate or 'parts' not in candidate.get('content', {}):
-                    finish_reason = candidate.get('finishReason', 'UNKNOWN')
-                    log.warning(f"Gemini response missing content/parts. Finish reason: {finish_reason}")
-                    if finish_reason == 'SAFETY':
-                        return "The response was blocked by safety filters. Try again with a different item!"
-                    return f"Error: Gemini returned an incomplete response (reason: {finish_reason}). Try again!"
+                response.raise_for_status()
+                data = response.json()
 
-                text = candidate['content']['parts'][0]['text']
-                return text.strip()
-            else:
-                return "Error: Could not generate a response from Gemini."
+                # Extract the text from Gemini's response
+                if 'candidates' in data and len(data['candidates']) > 0:
+                    candidate = data['candidates'][0]
 
-        except requests.exceptions.RequestException as e:
-            log.error(f"Error calling Gemini API: {e}")
-            return f"Error: Could not connect to Gemini API. {str(e)}"
+                    # Check if content was blocked or has no parts
+                    if 'content' not in candidate or 'parts' not in candidate.get('content', {}):
+                        finish_reason = candidate.get('finishReason', 'UNKNOWN')
+                        log.warning(f"Gemini response missing content/parts. Finish reason: {finish_reason}")
+                        if finish_reason == 'SAFETY':
+                            return "The response was blocked by safety filters. Try again with a different item!"
+                        return f"Error: Gemini returned an incomplete response (reason: {finish_reason}). Try again!"
+
+                    text = candidate['content']['parts'][0]['text']
+                    return text.strip()
+                else:
+                    return "Error: Could not generate a response from Gemini."
+
+            except requests.exceptions.RequestException as e:
+                log.error(f"Error calling Gemini API: {e}")
+                return f"Error: Could not connect to Gemini API. {str(e)}"
+
+        return "Error: Gemini API is currently unavailable (503). Please try again later."
 
     @commands.group(name="womp")
     async def womp_group(self, ctx: commands.Context):
@@ -185,7 +203,7 @@ Stat Change: -2 Charisma"""
             return
 
         phrase, adjective, noun, verb = result
-        view = WompActionView(self, adjective, noun, verb)
+        view = WompActionView(self, adjective, noun, verb, ctx.author.id)
         await ctx.send(phrase, view=view)
 
     @womp_group.command(name="wordsapi")
@@ -224,22 +242,30 @@ Stat Change: -2 Charisma"""
             return
 
         phrase, adjective, noun, verb = result
-        view = WompActionView(self, adjective, noun, verb)
+        view = WompActionView(self, adjective, noun, verb, interaction.user.id)
         await interaction.response.send_message(phrase, view=view)
 
 
 class WompActionView(discord.ui.View):
     """View with buttons for womp actions"""
 
-    def __init__(self, cog, adjective: str, noun: str, verb: str):
+    def __init__(self, cog, adjective: str, noun: str, verb: str, user_id: int):
         super().__init__(timeout=60.0)
         self.cog = cog
         self.adjective = adjective
         self.noun = noun
         self.verb = verb
+        self.user_id = user_id
 
         # Update the first button label with the random verb
         self.children[0].label = f"{verb.capitalize()} it"
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        """Only allow the original user to interact with the buttons"""
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This isn't your forage!", ephemeral=True)
+            return False
+        return True
 
     async def disable_all_buttons(self, interaction: discord.Interaction):
         """Disable all buttons and update the message"""
@@ -251,7 +277,7 @@ class WompActionView(discord.ui.View):
     async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb)
+        response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
@@ -259,7 +285,7 @@ class WompActionView(discord.ui.View):
     async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb)
+        response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
@@ -267,7 +293,7 @@ class WompActionView(discord.ui.View):
     async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb)
+        response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
