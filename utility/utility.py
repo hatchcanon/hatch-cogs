@@ -241,7 +241,7 @@ Stat Change: -2 Charisma"""
         }
 
         payload = {
-            "model": "moonshotai/kimi-k2.5",
+            "model": "arcee-ai/trinity-large-preview:free",
             "messages": [
                 {
                     "role": "user",
