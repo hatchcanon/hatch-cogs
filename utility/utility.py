@@ -18,7 +18,9 @@ class Utility(commands.Cog):
         self.config = Config.get_conf(self, identifier=1234567890, force_registration=True)
         default_global = {
             "api_key": None,
-            "gemini_api_key": None
+            "gemini_api_key": None,
+            "openrouter_api_key": None,
+            "use_openrouter": False
         }
         self.config.register_global(**default_global)
 
@@ -186,11 +188,116 @@ Stat Change: -2 Charisma"""
 
         return "Error: Gemini API is currently unavailable (503). Please try again later."
 
+    async def get_openrouter_response(self, action: str, adjective: str, noun: str, verb: str, interaction: discord.Interaction = None) -> str:
+        """
+        Call OpenRouter API to generate a D&D-style narrative response.
+
+        Args:
+            action: The action chosen ('verb', 'sell', or 'equip')
+            adjective: The item's adjective
+            noun: The item's noun
+            verb: The random verb generated
+            interaction: Optional interaction for sending retry messages
+
+        Returns:
+            A narrative response with stat changes, or an error message
+        """
+        openrouter_api_key = await self.config.openrouter_api_key()
+        if not openrouter_api_key:
+            return "Error: No OpenRouter API key set! Use `[p]womp openrouterapi <your_api_key>` to set it."
+
+        # Determine the action verb
+        if action == "verb":
+            action_verb = verb
+        elif action == "sell":
+            action_verb = "sell"
+        else:  # equip
+            action_verb = "equip"
+
+        # Create the prompt
+        prompt = f"""You are a Dungeon Master narrating the outcome of a player's action in a humorous D&D-style adventure.
+
+The player chose to {action_verb} a {adjective} {noun}.
+
+Generate a creative, entertaining response (2-3 sentences) describing what happens when they perform this action. Make it funny, dramatic, or unexpected.
+
+Then, decide if this action would increase or decrease ONE of these stats: attack, charisma, or intelligence. The stat change should be between -3 to +3.
+
+Format your response EXACTLY like this:
+[Your 2-3 sentence narrative here]
+
+Stat Change: [+/-][number] [stat name]
+
+Example:
+You bravely equip the rusty spoon as a helmet. It sits awkwardly on your head, and passersby can't help but laugh at your ridiculous appearance.
+
+Stat Change: -2 Charisma"""
+
+        url = "https://openrouter.ai/api/v1/chat/completions"
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {openrouter_api_key}"
+        }
+
+        payload = {
+            "model": "moonshotai/kimi-k2.5",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ]
+        }
+
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(url, headers=headers, json=payload)
+
+                # Check for 503 error and retry
+                if response.status_code == 503 and attempt < max_retries - 1:
+                    log.warning(f"OpenRouter API returned 503, retrying in 5 seconds...")
+                    if interaction:
+                        await interaction.followup.send("Retrying...")
+                    await asyncio.sleep(5)
+                    continue
+
+                response.raise_for_status()
+                data = response.json()
+
+                # Extract the text from OpenRouter's response
+                if 'choices' in data and len(data['choices']) > 0:
+                    choice = data['choices'][0]
+                    if 'message' in choice and 'content' in choice['message']:
+                        text = choice['message']['content']
+                        return text.strip()
+                    else:
+                        return "Error: OpenRouter returned an incomplete response. Try again!"
+                else:
+                    return "Error: Could not generate a response from OpenRouter."
+
+            except requests.exceptions.RequestException as e:
+                log.error(f"Error calling OpenRouter API: {e}")
+                return f"Error: Could not connect to OpenRouter API. {str(e)}"
+
+        return "Error: OpenRouter API is currently unavailable (503). Please try again later."
+
+    async def get_ai_response(self, action: str, adjective: str, noun: str, verb: str, interaction: discord.Interaction = None) -> str:
+        """
+        Get AI response using the configured provider (Gemini or OpenRouter).
+        """
+        use_openrouter = await self.config.use_openrouter()
+        if use_openrouter:
+            return await self.get_openrouter_response(action, adjective, noun, verb, interaction)
+        else:
+            return await self.get_gemini_response(action, adjective, noun, verb, interaction)
+
     @commands.group(name="womp")
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use `[p]womp forage` to go foraging, `[p]womp wordsapi <key>` to set your Words API key, or `[p]womp geminiapi <key>` to set your Gemini API key!")
+            await ctx.send("Use `[p]womp forage` to go foraging, `[p]womp wordsapi <key>` to set your Words API key, `[p]womp geminiapi <key>` to set your Gemini API key, or `[p]womp openrouterapi <key>` to set your OpenRouter API key!")
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
@@ -229,6 +336,38 @@ Stat Change: -2 Charisma"""
             await ctx.message.delete()
         except discord.Forbidden:
             await ctx.send("Warning: Could not delete your message. Please manually delete it to protect your API key.")
+
+    @womp_group.command(name="openrouterapi")
+    @commands.is_owner()
+    async def womp_openrouter_api(self, ctx: commands.Context, api_key: str):
+        """Set the OpenRouter API key for D&D-style responses"""
+        await self.config.openrouter_api_key.set(api_key)
+        await ctx.send("OpenRouter API key has been set successfully!")
+        # Delete the message to protect the API key
+        try:
+            await ctx.message.delete()
+        except discord.Forbidden:
+            await ctx.send("Warning: Could not delete your message. Please manually delete it to protect your API key.")
+
+    @womp_group.command(name="provider")
+    @commands.is_owner()
+    async def womp_provider(self, ctx: commands.Context, provider: str = None):
+        """Set or view the AI provider (gemini or openrouter)"""
+        if provider is None:
+            use_openrouter = await self.config.use_openrouter()
+            current = "openrouter" if use_openrouter else "gemini"
+            await ctx.send(f"Current AI provider: **{current}**\nUse `[p]womp provider gemini` or `[p]womp provider openrouter` to switch.")
+            return
+
+        provider = provider.lower()
+        if provider == "openrouter":
+            await self.config.use_openrouter.set(True)
+            await ctx.send("AI provider set to **OpenRouter** (moonshotai/kimi-k2.5).")
+        elif provider == "gemini":
+            await self.config.use_openrouter.set(False)
+            await ctx.send("AI provider set to **Gemini**.")
+        else:
+            await ctx.send("Invalid provider. Use `gemini` or `openrouter`.")
 
     @app_commands.command(name="womp", description="Womp goes foraging and finds you something random!")
     @app_commands.guild_only()
@@ -277,7 +416,7 @@ class WompActionView(discord.ui.View):
     async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("verb", self.adjective, self.noun, self.verb, interaction)
+        response = await self.cog.get_ai_response("verb", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
@@ -285,7 +424,7 @@ class WompActionView(discord.ui.View):
     async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("sell", self.adjective, self.noun, self.verb, interaction)
+        response = await self.cog.get_ai_response("sell", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
@@ -293,7 +432,7 @@ class WompActionView(discord.ui.View):
     async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_gemini_response("equip", self.adjective, self.noun, self.verb, interaction)
+        response = await self.cog.get_ai_response("equip", self.adjective, self.noun, self.verb, interaction)
         await interaction.followup.send(response)
         self.stop()
 
