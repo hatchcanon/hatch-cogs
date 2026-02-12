@@ -1,4 +1,5 @@
 from abc import ABC
+from copy import copy
 from typing import Literal
 
 import discord
@@ -109,3 +110,14 @@ class AdventureHelper(
 
         # Restore original content
         ctx.message.content = original_content
+
+    @commands.command(name="nvm")
+    @commands.guild_only()
+    async def nvm(self, ctx: commands.Context) -> None:
+        """Use 90% of your gold coins balance with the nv command"""
+        adv_bank_config = Config.get_conf(None, 384734293238749, cog_name="AdventureBank")
+        bal = await adv_bank_config.user(ctx.author).balance()
+        amount = int(bal * 0.9)
+        msg = copy(ctx.message)
+        msg.content = f"{ctx.prefix}nv {amount}"
+        await self.bot.process_commands(msg)
