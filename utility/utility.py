@@ -1,3 +1,5 @@
+import re
+
 import discord
 from redbot.core import commands, app_commands, Config
 from redbot.core.bot import Red
@@ -32,13 +34,12 @@ class Utility(commands.Cog):
         """Called when the cog is unloaded"""
         log.info("Utility cog unloaded")
 
-    async def get_random_word(self, part_of_speech: str, type_of: str = None) -> str:
+    async def get_random_word(self, part_of_speech: str) -> str:
         """
         Fetch a random word of the specified part of speech from Words API.
 
         Args:
             part_of_speech: 'adjective', 'noun', or 'verb'
-            type_of: Optional type filter (e.g., 'object', 'action')
 
         Returns:
             A random word string, or None if the request fails
@@ -47,23 +48,26 @@ class Utility(commands.Cog):
         if not api_key:
             return None
 
-        url = f"https://wordsapiv1.p.rapidapi.com/words?partOfSpeech={part_of_speech}&random=true"
-        if type_of:
-            url += f"&typeOf={type_of}"
+        url = f"https://wordsapiv1.p.rapidapi.com/words?partOfSpeech={part_of_speech}&random=true&lettersMin=3&lettersMax=10"
 
         headers = {
             "X-Mashape-Key": api_key,
             "X-Mashape-Host": "wordsapiv1.p.rapidapi.com"
         }
 
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            data = response.json()
-            return data.get('word', None)
-        except requests.exceptions.RequestException as e:
-            log.error(f"Error fetching {part_of_speech}: {e}")
-            return None
+        max_attempts = 5
+        for _ in range(max_attempts):
+            try:
+                response = requests.get(url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                word = data.get('word', None)
+                if word and ' ' not in word:
+                    return word
+            except requests.exceptions.RequestException as e:
+                log.error(f"Error fetching {part_of_speech}: {e}")
+                return None
+        return None
 
     async def generate_womp_phrase(self) -> str:
         """
@@ -79,8 +83,8 @@ class Utility(commands.Cog):
 
         # Fetch random words
         adjective = await self.get_random_word('adjective')
-        noun = await self.get_random_word('noun', type_of='object')
-        verb = await self.get_random_word('verb', type_of='action')
+        noun = await self.get_random_word('noun')
+        verb = await self.get_random_word('verb')
 
         # Check if all words were successfully retrieved
         if not all([adjective, noun, verb]):
@@ -293,11 +297,11 @@ Stat Change: -2 Charisma"""
         else:
             return await self.get_gemini_response(action, adjective, noun, verb, interaction)
 
-    @commands.group(name="womp")
+    @commands.group(name="womp", invoke_without_command=True)
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Use `[p]womp forage` to go foraging, `[p]womp wordsapi <key>` to set your Words API key, `[p]womp geminiapi <key>` to set your Gemini API key, or `[p]womp openrouterapi <key>` to set your OpenRouter API key!")
+            await ctx.send("Let me go foraging!")
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
@@ -399,6 +403,17 @@ class WompActionView(discord.ui.View):
         # Update the first button label with the random verb
         self.children[0].label = f"{verb.capitalize()} it"
 
+    def _check_positive_outcome(self, response: str) -> bool:
+        """Check if the AI response contains a positive stat change."""
+        match = re.search(r"Stat Change:\s*([+-]?\d+)", response)
+        return match is not None and int(match.group(1)) > 0
+
+    async def _handle_response(self, interaction: discord.Interaction, response: str):
+        """Send the AI response and dispatch event if positive outcome."""
+        await interaction.followup.send(response)
+        if self._check_positive_outcome(response):
+            self.cog.bot.dispatch("womp_positive_outcome", interaction.user, interaction.channel)
+
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow the original user to interact with the buttons"""
         if interaction.user.id != self.user_id:
@@ -417,7 +432,7 @@ class WompActionView(discord.ui.View):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_ai_response("verb", self.adjective, self.noun, self.verb, interaction)
-        await interaction.followup.send(response)
+        await self._handle_response(interaction, response)
         self.stop()
 
     @discord.ui.button(label="Sell it", style=discord.ButtonStyle.success)
@@ -425,7 +440,7 @@ class WompActionView(discord.ui.View):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_ai_response("sell", self.adjective, self.noun, self.verb, interaction)
-        await interaction.followup.send(response)
+        await self._handle_response(interaction, response)
         self.stop()
 
     @discord.ui.button(label="Equip it", style=discord.ButtonStyle.danger)
@@ -433,7 +448,7 @@ class WompActionView(discord.ui.View):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
         response = await self.cog.get_ai_response("equip", self.adjective, self.noun, self.verb, interaction)
-        await interaction.followup.send(response)
+        await self._handle_response(interaction, response)
         self.stop()
 
 

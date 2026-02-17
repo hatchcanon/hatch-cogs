@@ -1,5 +1,7 @@
 import asyncio
 import json
+import logging
+import types
 from pathlib import Path
 
 import discord
@@ -7,6 +9,8 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from .abc import MixinMeta
+
+log = logging.getLogger("red.adventurehelper")
 
 _ = Translator("AdventureHelper", __file__)
 
@@ -223,6 +227,36 @@ class AdventureHelperListeners(MixinMeta):
 
         # Start background task to update with participant info
         self.bot.loop.create_task(self._update_embed_task(session, message, analysis))
+
+    @commands.Cog.listener()
+    async def on_womp_positive_outcome(self, user, channel) -> None:
+        """Reset the user's Adventure skill cooldown as a bonus for a positive womp forage outcome."""
+        adv_cog = self.bot.get_cog("Adventure")
+        if adv_cog is None:
+            return
+
+        try:
+            from adventure.charsheet import Character
+
+            lock = adv_cog.get_lock(user)
+            async with lock:
+                fake_ctx = types.SimpleNamespace(bot=self.bot)
+                daily_bonus = await adv_cog.config.daily_bonus.all()
+                c = await Character.from_json(
+                    fake_ctx, adv_cog.config, user, daily_bonus
+                )
+
+                c.heroclass["ability"] = False
+                c.heroclass["cooldown"] = 0
+                c.heroclass["catch_cooldown"] = 0
+
+                await adv_cog.config.user(user).set(await c.to_json(fake_ctx, adv_cog.config))
+
+            await channel.send(
+                f"{user.mention} Your positive foraging outcome has reset your adventure skill cooldown!"
+            )
+        except Exception as e:
+            log.error(f"Error resetting cooldown for {user}: {e}")
 
     @commands.Cog.listener()
     async def on_adventure(self, session) -> None:
