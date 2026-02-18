@@ -115,13 +115,22 @@ class AdventureHelper(
     @commands.guild_only()
     async def lootall(self, ctx: commands.Context) -> None:
         """Loot all rarity chests then sell everything except set items."""
+        adv_config = Config.get_conf(None, 2_710_801_001, cog_name="Adventure")
+        char_data = await adv_config.user(ctx.author).all()
+        treasure = char_data.get("treasure", [0, 0, 0, 0, 0, 0])
+        rarities = ["normal", "rare", "epic", "legendary", "ascended", "set"]
+
         msg = copy(ctx.message)
-        for rarity in ["normal", "rare", "epic", "legendary", "ascended", "set"]:
-            msg.content = f"{ctx.prefix}loot {rarity} 100"
-            await self.bot.process_commands(msg)
-        for rarity in ["normal", "rare", "epic", "legendary", "ascended"]:
-            msg.content = f"{ctx.prefix}backpack sellall {rarity}"
-            await self.bot.process_commands(msg)
+        for i, rarity in enumerate(rarities):
+            count = treasure[i] if i < len(treasure) else 0
+            while count > 0:
+                batch = min(count, 100)
+                msg.content = f"{ctx.prefix}loot {rarity} {batch}"
+                await self.bot.process_commands(msg)
+                count -= batch
+
+        msg.content = f"{ctx.prefix}cbackpack sell --rarity normal rare epic legendary ascended"
+        await self.bot.process_commands(msg)
 
     @commands.command(name="nvm")
     @commands.guild_only()

@@ -392,7 +392,7 @@ Stat Change: -2 Charisma"""
     @commands.command(name="wpc")
     async def wpc(self, ctx: commands.Context) -> None:
         msg = copy(ctx.message)
-        for cmd in ["work", "pay", "crime"]:
+        for cmd in ["work", "payday", "crime"]:
             msg.content = f"{ctx.prefix}{cmd}"
             await self.bot.process_commands(msg)
 
