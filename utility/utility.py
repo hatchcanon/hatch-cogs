@@ -3,6 +3,7 @@ import re
 import discord
 from redbot.core import commands, app_commands, Config
 from redbot.core.bot import Red
+from copy import copy
 import logging
 import requests
 import asyncio
@@ -373,7 +374,7 @@ Stat Change: -2 Charisma"""
         else:
             await ctx.send("Invalid provider. Use `gemini` or `openrouter`.")
 
-    @app_commands.command(name="womp", description="Womp goes foraging and finds you something random!")
+    @app_commands.command(name="womp", description="rigged")
     @app_commands.guild_only()
     async def womp_slash(self, interaction: discord.Interaction):
         """Womp goes foraging and finds you something random!"""
@@ -387,6 +388,14 @@ Stat Change: -2 Charisma"""
         phrase, adjective, noun, verb = result
         view = WompActionView(self, adjective, noun, verb, interaction.user.id)
         await interaction.response.send_message(phrase, view=view)
+
+    @commands.command(name="wpc")
+    async def wpc(self, ctx: commands.Context) -> None:
+        msg = copy(ctx.message)
+        for cmd in ["work", "pay", "crime"]:
+            msg.content = f"{ctx.prefix}{cmd}"
+            await self.bot.process_commands(msg)
+
 
 
 class WompActionView(discord.ui.View):

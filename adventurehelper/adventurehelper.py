@@ -111,6 +111,18 @@ class AdventureHelper(
         # Restore original content
         ctx.message.content = original_content
 
+    @commands.command(name="lsns")
+    @commands.guild_only()
+    async def lootall(self, ctx: commands.Context) -> None:
+        """Loot all rarity chests then sell everything except set items."""
+        msg = copy(ctx.message)
+        for rarity in ["normal", "rare", "epic", "legendary", "ascended", "set"]:
+            msg.content = f"{ctx.prefix}loot {rarity} 100"
+            await self.bot.process_commands(msg)
+        for rarity in ["normal", "rare", "epic", "legendary", "ascended"]:
+            msg.content = f"{ctx.prefix}backpack sellall {rarity}"
+            await self.bot.process_commands(msg)
+
     @commands.command(name="nvm")
     @commands.guild_only()
     async def nvm(self, ctx: commands.Context) -> None:
