@@ -120,11 +120,14 @@ class AdventureHelper(
         treasure = char_data.get("treasure", [0, 0, 0, 0, 0, 0])
         rarities = ["normal", "rare", "epic", "legendary", "ascended", "set"]
 
+        loot_cmd = self.bot.get_command("loot")
         msg = copy(ctx.message)
         for i, rarity in enumerate(rarities):
             count = treasure[i] if i < len(treasure) else 0
             while count > 0:
                 batch = min(count, 100)
+                if loot_cmd:
+                    loot_cmd.reset_cooldown(ctx)
                 msg.content = f"{ctx.prefix}loot {rarity} {batch}"
                 await self.bot.process_commands(msg)
                 count -= batch

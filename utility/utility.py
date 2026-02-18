@@ -302,7 +302,7 @@ Stat Change: -2 Charisma"""
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("Let me go foraging!")
+            await ctx.send("rigged")
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
@@ -374,7 +374,7 @@ Stat Change: -2 Charisma"""
         else:
             await ctx.send("Invalid provider. Use `gemini` or `openrouter`.")
 
-    @app_commands.command(name="womp", description="rigged")
+    @app_commands.command(name="womp", description="Womp goes foraging and finds you something random!")
     @app_commands.guild_only()
     async def womp_slash(self, interaction: discord.Interaction):
         """Womp goes foraging and finds you something random!"""
