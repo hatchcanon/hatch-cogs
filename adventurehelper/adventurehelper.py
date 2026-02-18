@@ -111,7 +111,7 @@ class AdventureHelper(
         # Restore original content
         ctx.message.content = original_content
 
-    @commands.command(name="lsns")
+    @commands.command(name="lootall")
     @commands.guild_only()
     async def lootall(self, ctx: commands.Context) -> None:
         """Loot all rarity chests then sell everything except set items."""
@@ -133,21 +133,28 @@ class AdventureHelper(
             ("set", Rarities.set),
         ]
 
+        looted = {}
         async with adv_cog.get_lock(ctx.author):
             c = await Character.from_json(ctx, adv_cog.config, ctx.author, adv_cog._daily_bonus)
             for rarity_name, box_type in rarities:
                 chest = getattr(c.treasure, rarity_name)
                 count = chest.number
+                total = count
                 while count > 0:
                     batch = min(count, 100)
                     chest -= batch
                     await adv_cog.config.user(ctx.author).set(await c.to_json(ctx, adv_cog.config))
                     await adv_cog._open_chests(ctx, box_type, batch, character=c)
                     count -= batch
+                if total > 0:
+                    looted[rarity_name] = total
 
-        msg = copy(ctx.message)
-        msg.content = f"{ctx.prefix}cbackpack sell --rarity normal rare epic legendary ascended"
-        await self.bot.process_commands(msg)
+        if looted:
+            summary = ", ".join(f"{count} {rarity}" for rarity, count in looted.items())
+            await ctx.send(f"Looted: {summary}")
+        else:
+            await ctx.send("No chests to loot.")
+
 
     @commands.command(name="nvm")
     @commands.guild_only()
