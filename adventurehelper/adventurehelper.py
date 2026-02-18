@@ -115,30 +115,37 @@ class AdventureHelper(
     @commands.guild_only()
     async def lootall(self, ctx: commands.Context) -> None:
         """Loot all rarity chests then sell everything except set items."""
-        adv_config = Config.get_conf(None, 2_710_801_001, cog_name="Adventure")
-        char_data = await adv_config.user(ctx.author).all()
-        treasure = char_data.get("treasure", [0, 0, 0, 0, 0, 0])
-        rarities = ["normal", "rare", "epic", "legendary", "ascended", "set"]
+        import sys
+        adv_cog = self.bot.get_cog("Adventure")
+        if not adv_cog:
+            return await ctx.send("Adventure cog not found.")
 
-        import gobcog.adventure.loot as _loot_module
-        _original_is_dev = _loot_module.is_dev
-        _loot_module.is_dev = lambda _: True
+        adv_pkg = type(adv_cog).__module__.rsplit(".", 1)[0]
+        Rarities = sys.modules[adv_pkg + ".constants"].Rarities
+        Character = sys.modules[adv_pkg + ".charsheet"].Character
 
-        loot_cmd = self.bot.get_command("loot")
-        msg = copy(ctx.message)
-        try:
-            for i, rarity in enumerate(rarities):
-                count = treasure[i] if i < len(treasure) else 0
+        rarities = [
+            ("normal", Rarities.normal),
+            ("rare", Rarities.rare),
+            ("epic", Rarities.epic),
+            ("legendary", Rarities.legendary),
+            ("ascended", Rarities.ascended),
+            ("set", Rarities.set),
+        ]
+
+        async with adv_cog.get_lock(ctx.author):
+            c = await Character.from_json(ctx, adv_cog.config, ctx.author, adv_cog._daily_bonus)
+            for rarity_name, box_type in rarities:
+                chest = getattr(c.treasure, rarity_name)
+                count = chest.number
                 while count > 0:
                     batch = min(count, 100)
-                    if loot_cmd:
-                        loot_cmd.reset_cooldown(ctx)
-                    msg.content = f"{ctx.prefix}loot {rarity} {batch}"
-                    await self.bot.process_commands(msg)
+                    chest -= batch
+                    await adv_cog.config.user(ctx.author).set(await c.to_json(ctx, adv_cog.config))
+                    await adv_cog._open_chests(ctx, box_type, batch, character=c)
                     count -= batch
-        finally:
-            _loot_module.is_dev = _original_is_dev
 
+        msg = copy(ctx.message)
         msg.content = f"{ctx.prefix}cbackpack sell --rarity normal rare epic legendary ascended"
         await self.bot.process_commands(msg)
 
