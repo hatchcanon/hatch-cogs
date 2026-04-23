@@ -23,7 +23,8 @@ class Utility(commands.Cog):
             "api_key": None,
             "gemini_api_key": None,
             "openrouter_api_key": None,
-            "use_openrouter": False
+            "use_openrouter": False,
+            "openrouter_model": "z-ai/glm-4.5-air:free"
         }
         self.config.register_global(**default_global)
 
@@ -245,8 +246,9 @@ Stat Change: -2 Charisma"""
             "Authorization": f"Bearer {openrouter_api_key}"
         }
 
+        model = await self.config.openrouter_model()
         payload = {
-            "model": "z-ai/glm-4.5-air:free",
+            "model": model,
             "messages": [
                 {
                     "role": "user",
@@ -374,6 +376,16 @@ Stat Change: -2 Charisma"""
         else:
             await ctx.send("Invalid provider. Use `gemini` or `openrouter`.")
 
+    @app_commands.command(name="setmodel", description="Set the OpenRouter model (owner only)")
+    @app_commands.guild_only()
+    async def set_model_slash(self, interaction: discord.Interaction):
+        """Open a modal to change the OpenRouter model."""
+        if not await self.bot.is_owner(interaction.user):
+            await interaction.response.send_message("Only the bot owner can use this.", ephemeral=True)
+            return
+        current_model = await self.config.openrouter_model()
+        await interaction.response.send_modal(SetModelModal(self, current_model))
+
     @app_commands.command(name="womp", description="Womp goes foraging and finds you something random!")
     @app_commands.guild_only()
     async def womp_slash(self, interaction: discord.Interaction):
@@ -396,6 +408,24 @@ Stat Change: -2 Charisma"""
             msg.content = f"{ctx.prefix}{cmd}"
             await self.bot.process_commands(msg)
 
+
+
+class SetModelModal(discord.ui.Modal, title="Set OpenRouter Model"):
+    model_input = discord.ui.TextInput(
+        label="Model",
+        placeholder="e.g. z-ai/glm-4.5-air:free",
+        max_length=200,
+    )
+
+    def __init__(self, cog, current_model: str):
+        super().__init__()
+        self.cog = cog
+        self.model_input.default = current_model
+
+    async def on_submit(self, interaction: discord.Interaction):
+        new_model = self.model_input.value.strip()
+        await self.cog.config.openrouter_model.set(new_model)
+        await interaction.response.send_message(f"Model set to `{new_model}`", ephemeral=True)
 
 
 class WompActionView(discord.ui.View):
