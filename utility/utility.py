@@ -246,7 +246,7 @@ Stat Change: -2 Charisma"""
         }
 
         payload = {
-            "model": "arcee-ai/trinity-large-preview:free",
+            "model": "nvidia/nemotron-3-super-120b-a12b:free",
             "messages": [
                 {
                     "role": "user",
