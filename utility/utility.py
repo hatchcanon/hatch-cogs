@@ -7,6 +7,7 @@ from copy import copy
 import logging
 import requests
 import asyncio
+import random
 
 log = logging.getLogger("red.utility")
 
@@ -304,7 +305,7 @@ Stat Change: -2 Charisma"""
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send("rigged")
+            await ctx.send(random.choice(["rigged", "ez"]))
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
