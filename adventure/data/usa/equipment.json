@@ -1,0 +1,286 @@
+{
+  "belt": {
+    "Wristband": {
+      "dex": 1,
+      "int": 1
+    },
+    "Utility Belt": {
+      "att": 1,
+      "dex": 1
+    },
+    "Lanyard": {
+      "dex": 2
+    },
+    "Sash of Office": {
+      "att": 2,
+      "int": 2
+    },
+    "Cummerbund": {
+      "att": 1,
+      "int": 1
+    }
+  },
+  "boots": {
+    "Wingtips": {
+      "att": 1,
+      "dex": -1,
+      "int": 1
+    },
+    "Loafers": {},
+    "Combat Boots": {
+      "att": 2,
+      "cha": 2,
+      "dex": -1,
+      "int": 2
+    },
+    "Sneakers": {
+      "dex": 1
+    },
+    "Steel-Toed Boots": {
+      "att": 2
+    }
+  },
+  "charm": {
+    "Campaign Pin": {
+      "att": 1,
+      "cha": 1,
+      "int": 2,
+      "luck": 1
+    },
+    "Lucky Rabbit's Foot": {
+      "att": 1,
+      "cha": 3,
+      "int": 1,
+      "luck": 1
+    },
+    "Medal of Freedom": {
+      "att": 2,
+      "cha": 1,
+      "int": 2
+    },
+    "Classified Memo Fragment": {
+      "att": 3,
+      "dex": 1,
+      "int": 3,
+      "luck": 2
+    }
+  },
+  "chest": {
+    "Blazer": {
+      "att": 1,
+      "cha": 1
+    },
+    "Bulletproof Vest": {
+      "att": 3,
+      "cha": 1,
+      "dex": -2,
+      "int": 2
+    },
+    "Kevlar Vest": {
+      "att": 2,
+      "cha": 2,
+      "dex": -1,
+      "int": 2,
+      "luck": 1
+    },
+    "Judicial Robes": {
+      "att": 0,
+      "cha": 0,
+      "dex": 2,
+      "int": 2,
+      "luck": 2
+    },
+    "Suit Vest": {
+      "att": 1,
+      "cha": 1,
+      "dex": 3,
+      "int": 1,
+      "luck": 1
+    }
+  },
+  "gloves": {
+    "Iron Handshake": {
+      "att": 2,
+      "cha": -1,
+      "dex": 2,
+      "int": -2
+    },
+    "Riot Gloves": {
+      "att": 2,
+      "cha": 1,
+      "dex": -1,
+      "int": 2
+    },
+    "White Gloves": {
+      "dex": 1
+    },
+    "Podium Grips": {
+      "att": 1
+    }
+  },
+  "head": {
+    "Top Hat": {
+      "att": 1,
+      "cha": 3,
+      "dex": 2,
+      "int": 3,
+      "luck": 2
+    },
+    "Aviators": {
+      "att": 1,
+      "dex": 2,
+      "luck": 1
+    },
+    "Secret Service Earpiece": {
+      "att": 2,
+      "cha": 0,
+      "dex": -1,
+      "int": 2,
+      "luck": 0
+    },
+    "Bullhorn": {
+      "att": 2
+    },
+    "Campaign Mask": {
+      "att": 1,
+      "int": 1
+    }
+  },
+  "left": {
+    "Riot Shield": {
+      "att": 3,
+      "cha": 1,
+      "dex": -2,
+      "int": 1
+    },
+    "Press Podium": {
+      "att": 2,
+      "int": 2
+    },
+    "Podium": {
+      "att": 1,
+      "cha": 1,
+      "int": 1
+    },
+    "Briefing Book": {
+      "cha": 2,
+      "dex": 2,
+      "int": 3,
+      "luck": 2
+    },
+    "Constitution Copy": {
+      "dex": -2,
+      "int": 2,
+      "luck": 2
+    }
+  },
+  "legs": {
+    "Dress Slacks": {
+      "att": 1,
+      "cha": 1,
+      "dex": 1,
+      "int": 1
+    },
+    "Shin Guards": {
+      "att": 2,
+      "int": 2
+    },
+    "Jogging Pants": {
+      "dex": 1,
+      "luck": 1
+    },
+    "Suit Pants": {
+      "att": 2,
+      "cha": 1,
+      "int": 2
+    },
+    "Khakis": {
+      "att": 1,
+      "dex": 2,
+      "int": 1
+    }
+  },
+  "neck": {
+    "Press Badge Chain": {
+      "att": 2,
+      "dex": 1,
+      "int": 2,
+      "luck": 1
+    },
+    "Bow Tie": {
+      "att": 1,
+      "int": 1
+    },
+    "Ambassador's Chain": {
+      "att": 3,
+      "cha": 2,
+      "dex": 2,
+      "int": 3,
+      "luck": 2
+    }
+  },
+  "right": {
+    "Veto Stamp": {
+      "att": 1,
+      "cha": -1
+    },
+    "Autopen": {
+      "att": 2,
+      "dex": 2,
+      "luck": 1
+    },
+    "Ceremonial Sword": {
+      "att": 2,
+      "cha": 1
+    },
+    "Flagpole": {
+      "dex": 2,
+      "int": 2,
+      "luck": 1
+    },
+    "Gavel": {
+      "att": 2
+    }
+  },
+  "ring": {
+    "Signet Ring": {
+      "att": 2,
+      "cha": 1,
+      "dex": 1,
+      "int": 2,
+      "luck": 1
+    },
+    "Class Ring": {
+      "att": 1,
+      "cha": 1,
+      "int": 1
+    }
+  },
+  "two handed": {
+    "Presidential Podium": {
+      "cha": 3,
+      "int": 5,
+      "luck": 2
+    },
+    "Filibuster Machine": {
+      "att": 4,
+      "cha": 2,
+      "dex": 3,
+      "luck": 2
+    },
+    "Executive Order Pen": {
+      "att": 4,
+      "cha": 2
+    },
+    "Flag & Pole": {
+      "cha": 1,
+      "dex": 1,
+      "int": 3,
+      "luck": 1
+    },
+    "Budget-Cutting Sledgehammer": {
+      "att": 5,
+      "dex": -2
+    }
+  }
+}
