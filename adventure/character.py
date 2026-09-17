@@ -167,8 +167,14 @@ class CharacterCommands(AdventureMixin):
                 await self.config.user(ctx.author).set(await c.to_json(ctx, self.config))
                 await smart_embed(
                     ctx,
-                    _("{author}, you permanently raised your {spend} value by {amount}.").format(
-                        author=bold(ctx.author.display_name), spend=spend, amount=amount
+                    _(
+                        "{author}, you permanently raised your {spend} value by {amount}. "
+                        "You have {remaining} unspent skillpoints left."
+                    ).format(
+                        author=bold(ctx.author.display_name),
+                        spend=spend,
+                        amount=amount,
+                        remaining=c.skill["pool"],
                     ),
                 )
 
