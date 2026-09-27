@@ -46,13 +46,13 @@ class EmojiSteal(commands.Cog):
             )
             await ctx.send(embed=embed)
 
-    @commands.hybrid_group(name="emoji", invoke_without_command=True)
+    @commands.hybrid_group(name="emote", invoke_without_command=True)
     @commands.guild_only()
-    async def emoji(self, ctx: commands.Context):
+    async def emote(self, ctx: commands.Context):
         """Copy and list custom emojis."""
         await ctx.send_help(ctx.command)
 
-    @emoji.command(name="copy", aliases=["steal", "add"])
+    @emote.command(name="copy", aliases=["steal", "add"])
     @commands.guild_only()
     @commands.bot_has_permissions(manage_emojis_and_stickers=True)
     @commands.has_permissions(manage_emojis_and_stickers=True)
@@ -69,7 +69,7 @@ class EmojiSteal(commands.Cog):
     ):
         """Copy a custom emoji into this server.
 
-        Paste the emoji itself (e.g. `[p]emoji copy :thing: newname`).
+        Paste the emoji itself (e.g. `[p]emote copy :thing: newname`).
         """
         await ctx.defer()
 
@@ -102,7 +102,7 @@ class EmojiSteal(commands.Cog):
 
         await ctx.send(f"Added {new_emoji} as `:{new_emoji.name}:`")
 
-    @emoji.command(name="list", aliases=["ls"])
+    @emote.command(name="list", aliases=["ls"])
     @commands.guild_only()
     async def emoji_list(self, ctx: commands.Context):
         """List every custom emoji in this server."""
