@@ -906,11 +906,15 @@ class BackpackSelectEquip(discord.ui.Select):
                     ephemeral=True,
                 )
             self.view.selected_items.append(item)
-        page = await self.view.source.get_page(self.view.current_page)
-        kwargs = await self.view._get_kwargs_from_page(page)
-        await interaction.response.edit_message(**kwargs)
-        if len(self.view.selected_items) >= 2:
-            self.view.stop()
+        try:
+            page = await self.view.source.get_page(self.view.current_page)
+            kwargs = await self.view._get_kwargs_from_page(page)
+            await interaction.response.edit_message(**kwargs)
+        finally:
+            # Always stop once two items are picked, even if re-rendering the menu fails,
+            # otherwise the forge command keeps waiting on the menu.
+            if len(self.view.selected_items) >= 2:
+                self.view.stop()
 
     async def callback(self, interaction: discord.Interaction):
         if self.view.tinker_forge:
