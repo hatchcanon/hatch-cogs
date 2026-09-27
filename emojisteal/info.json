@@ -1,0 +1,13 @@
+{
+    "name": "EmojiSteal",
+    "author": ["hatch"],
+    "description": "Copy emojis and stickers from other servers into this one, and list what's already here.",
+    "install_msg": "Thanks for installing EmojiSteal! Use `[p]help EmojiSteal` to get started.",
+    "short": "Copy and list emojis and stickers.",
+    "min_bot_version": "3.5.0",
+    "min_python_version": [3, 8, 0],
+    "type": "COG",
+    "requirements": [],
+    "tags": ["utility", "emoji", "sticker"],
+    "end_user_data_statement": "This cog does not persistently store any user data."
+}

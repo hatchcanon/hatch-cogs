@@ -22,5 +22,6 @@
 | gameping          | <details><summary>Ping your discord for friends</summary>works for any game with parameters</details>                                                                       |
 | riotgameping          | <details><summary>Ping for valorant or league games</summary>default looks for 4 for 30 minutes. Can ping custom number and custom time</details>                                                                       |
 | wordle          | <details><summary>Wordle Tracker</summary>Paste your results in a channel to track</details>                                                                       |
+| emojisteal          | <details><summary>Copy emojis and stickers</summary>Copy emojis/stickers from other servers into yours, and list what's already in a server</details>                                                                       |
 
 redbot hatchtest --dev
