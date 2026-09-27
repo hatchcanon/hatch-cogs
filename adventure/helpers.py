@@ -235,7 +235,10 @@ class ForgeReplaceSelect(discord.ui.Select):
             discord.SelectOption(label=str(item), value=str(i), description=item.stat_str(), emoji=item.rarity.emoji)
             for i, item in enumerate(items)
         ]
-        super().__init__(placeholder=_("Select a device to replace"), min_values=1, max_values=1, options=options)
+        # A select fills a whole row, so pin it to row 0 and keep the buttons on row 1.
+        super().__init__(
+            placeholder=_("Select a device to replace"), min_values=1, max_values=1, options=options, row=0
+        )
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer()
@@ -270,7 +273,7 @@ class ForgeReplaceView(discord.ui.View):
         if self.message:
             await self.message.edit(view=None)
 
-    @discord.ui.button(label=_("Cancel"), style=discord.ButtonStyle.red)
+    @discord.ui.button(label=_("Cancel"), style=discord.ButtonStyle.red, row=1)
     async def cancel_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.confirmed = False
