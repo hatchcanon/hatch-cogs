@@ -25,7 +25,7 @@ _ = Translator("Adventure", __file__)
 
 log = logging.getLogger("red.cogs.adventure")
 
-FORGE_LIMIT = 2  # max forged items a character may own at once; mirrors the cap in Character.rebirth
+FORGE_LIMIT = 3 # max forged items a character may own at once; mirrors the cap in Character.rebirth
 
 
 class ClassAbilities(AdventureMixin):
@@ -901,7 +901,7 @@ class ClassAbilities(AdventureMixin):
                         _("This command is on cooldown. Try again in {}").format(f"<t:{cooldown_time}:R>"),
                     )
                 ascended_forge_msg = ""
-                ignored_rarities = {Rarities.forged, Rarities.set, Rarities.event}
+                ignored_rarities = {Rarities.forged, Rarities.event}
                 if c.rebirths < 30:
                     ignored_rarities.add(Rarities.ascended)
                     ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
@@ -923,6 +923,15 @@ class ClassAbilities(AdventureMixin):
                         ),
                     )
                     return
+                forged_count = sum(1 for i in c.backpack.values() if i.rarity is Rarities.forged)
+                if forged_count >= FORGE_LIMIT:
+                    await smart_embed(
+                        ctx,
+                        _(
+                            "{author}, you are at the forge limit ({count}/{limit} devices). "
+                            "You must abandon one of your existing devices to keep a newly forged one."
+                        ).format(author=bold(ctx.author.display_name), count=forged_count, limit=FORGE_LIMIT),
+                    )
                 menu = BackpackMenu(
                     source=BackpackSource(pages),
                     cog=self,
@@ -1033,7 +1042,7 @@ class ClassAbilities(AdventureMixin):
 
     async def get_forge_items(self, ctx: commands.Context, c: Character):
         ascended_forge_msg = ""
-        ignored_rarities = [Rarities.forged, Rarities.set, Rarities.event]
+        ignored_rarities = [Rarities.forged, Rarities.event]
         if c.rebirths < 30:
             ignored_rarities.append(Rarities.ascended)
             ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
@@ -1083,7 +1092,7 @@ class ClassAbilities(AdventureMixin):
         except asyncio.TimeoutError:
             timeout_msg = _("I don't have all day you know, {}.").format(bold(ctx.author.display_name))
             return await smart_embed(ctx, timeout_msg)
-        if item.rarity in [Rarities.forged, Rarities.set]:
+        if item.rarity in [Rarities.forged]:
             return await smart_embed(
                 ctx,
                 _("{c}, {item.rarity} items cannot be reforged.").format(c=bold(ctx.author.display_name), item=item),

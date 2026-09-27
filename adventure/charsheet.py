@@ -965,7 +965,7 @@ class Character:
             if clean and not slot_group:
                 continue
             async for item in AsyncIter(slot_group, steps=100):
-                if forging and (item.rarity in [Rarities.forged, Rarities.set] or item in consumed_list):
+                if forging and (item.rarity in [Rarities.forged] or item in consumed_list):
                     continue
                 if forging and item.rarity is Rarities.ascended:
                     if self.rebirths < 30:
@@ -1594,7 +1594,7 @@ class Character:
                     backpack[n] = i
                 elif i.get("rarity", False) in ["set", "forged"] or str(v) in [".mirror_shield"]:
                     if i.get("rarity", False) in ["forged"]:
-                        if forged >= 2:  # mirrors FORGE_LIMIT in class_abilities.py
+                        if forged >= 3:  # mirrors FORGE_LIMIT in class_abilities.py
                             continue
                         forged += 1
                     backpack[n] = i

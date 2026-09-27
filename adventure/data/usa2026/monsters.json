@@ -33,7 +33,7 @@
     "Steve Bannon, War Room Strategist": {"hp": 400, "pdef": 1, "mdef": 1.4, "dipl": 440, "image": "https://upload.wikimedia.org/wikipedia/commons/9/94/Steve_Bannon_2023_by_Gage_Skidmore.jpg", "boss": true, "miniboss": {}, "color": ""},
     "White House Chief of Staff Susie Wiles": {"hp": 540, "pdef": 1.3, "mdef": 1.2, "dipl": 480, "image": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Susie_Wiles_at_the_White_House_on_March_26%2C_2025_%28cropped%29.jpg", "boss": true, "miniboss": {}, "color": ""},
     "White House Communications Director Steven Cheung": {"hp": 380, "pdef": 1, "mdef": 1.2, "dipl": 380, "image": "https://upload.wikimedia.org/wikipedia/commons/4/4f/Steven_Cheung_%282025%29.jpg", "boss": true, "miniboss": {}, "color": ""},
-    "FBI Director Kash Patel": {"hp": 460, "pdef": 1.3, "mdef": 1, "dipl": 380, "image": "https://media1.tenor.com/m/_UAP4xIZTC0AAAAC/weird-stare.gif", "boss": true, "miniboss": {}, "color": ""},
+    "FBI Director Kash Patel": {"hp": 460, "pdef": 1.3, "mdef": 1, "dipl": 380, "image": "https://thunderdungeon.com/wp-content/uploads/2026/04/Kash-Patel-memes-gallery-featured-image-01-20260422.jpg", "boss": true, "miniboss": {}, "color": ""},
     "Donald Trump Jr.": {"hp": 420, "pdef": 1.1, "mdef": 1.1, "dipl": 420, "image": "https://i.imgur.com/Z9ZR9Vl.jpeg", "boss": true, "miniboss": {}, "color": ""},
     "Elon Musk, DOGE Chainsaw": {"hp": 480, "pdef": 1.2, "mdef": 1.3, "dipl": 460, "image": "https://i.imgur.com/odMpgxT.jpeg", "boss": true, "miniboss": {}, "color": ""},
     "Domestic Policy Council Director Vince Haley": {"hp": 400, "pdef": 1.1, "mdef": 1.1, "dipl": 380, "image": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Vince_Haley_September_2025.jpg", "boss": true, "miniboss": {}, "color": ""},
