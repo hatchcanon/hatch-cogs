@@ -676,10 +676,7 @@ class Adventure(
             await ctx.send(msg)
         elif isinstance(error, discord.NotFound):
             handled = True
-            msg = _("An important message has been deleted, please try again.").format(
-                message=error.message,
-                command=error.cmd,
-            )
+            msg = _("An important message has been deleted, please try again.")
             await ctx.send(msg)
             lock = self.get_lock(ctx.author)  # This is a guess ... but its better than not handled.
             with contextlib.suppress(Exception):

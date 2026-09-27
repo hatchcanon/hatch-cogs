@@ -943,7 +943,8 @@ class ClassAbilities(AdventureMixin):
                 )
                 await menu.start(ctx=ctx)
                 await menu.wait()
-                await menu.message.edit(view=None)
+                with contextlib.suppress(discord.NotFound):  # menu was closed with the X button
+                    await menu.message.edit(view=None)
                 consumed = menu.selected_items
                 if not consumed:
                     timeout_msg = _("I don't have all day you know, {}.").format(bold(ctx.author.display_name))

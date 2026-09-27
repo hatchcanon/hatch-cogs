@@ -895,26 +895,29 @@ class BackpackSelectEquip(discord.ui.Select):
         await smart_embed(message=box(equip_msg, lang="ansi"), interaction=interaction)
 
     async def forge_items(self, interaction: discord.Interaction):
-        if len(self.view.selected_items) >= 2:
+        # Re-rendering the page swaps this select for a new one (see BackpackMenu._modify_select),
+        # which detaches it and sets self.view to None, so keep a reference to the view.
+        view = self.view
+        if len(view.selected_items) >= 2:
             return await interaction.response.defer()
         for item_index in self.values:
-            item = self.view.source.current_table.items[int(item_index)]
-            if item in self.view.selected_items and item.owned < 2:
+            item = view.source.current_table.items[int(item_index)]
+            if item in view.selected_items and item.owned < 2:
                 return await smart_embed(
                     message=_("You can't make items out of thin air like that! This is a duplicate."),
                     interaction=interaction,
                     ephemeral=True,
                 )
-            self.view.selected_items.append(item)
+            view.selected_items.append(item)
         try:
-            page = await self.view.source.get_page(self.view.current_page)
-            kwargs = await self.view._get_kwargs_from_page(page)
+            page = await view.source.get_page(view.current_page)
+            kwargs = await view._get_kwargs_from_page(page)
             await interaction.response.edit_message(**kwargs)
         finally:
             # Always stop once two items are picked, even if re-rendering the menu fails,
             # otherwise the forge command keeps waiting on the menu.
-            if len(self.view.selected_items) >= 2:
-                self.view.stop()
+            if len(view.selected_items) >= 2:
+                view.stop()
 
     async def callback(self, interaction: discord.Interaction):
         if self.view.tinker_forge:
