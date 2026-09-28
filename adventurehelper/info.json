@@ -1,6 +1,6 @@
 {
     "author": [
-        "Nathan"
+        "hatch"
     ],
     "description": "Provides strategic guidance for adventure encounters based on enemy attributes",
     "disabled": false,

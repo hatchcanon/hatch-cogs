@@ -23,5 +23,7 @@
 | riotgameping          | <details><summary>Ping for valorant or league games</summary>default looks for 4 for 30 minutes. Can ping custom number and custom time</details>                                                                       |
 | wordle          | <details><summary>Wordle Tracker</summary>Paste your results in a channel to track</details>                                                                       |
 | emojisteal          | <details><summary>Copy emojis and stickers</summary>Copy emojis/stickers from other servers into yours, and list what's already in a server</details>                                                                       |
+| adventurehelper          | <details><summary>Strategic guidance for adventure encounters</summary>Suggests how to approach adventure encounters based on enemy attributes. Requires <a href="https://github.com/aikaterna/gobcog">adventure</a>. Toggle with `[p]adventurehelper toggle`</details>                                                                       |
+| utility          | <details><summary>Random utilities</summary>Includes `[p]womp forage`, where Womp finds you something random and an AI narrates the outcome in D&D style (Gemini or OpenRouter)</details>                                                                       |
 
 redbot hatchtest --dev
