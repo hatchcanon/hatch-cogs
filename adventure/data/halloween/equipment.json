@@ -1,64 +1,64 @@
 {
   "belt": {
-    "Wristband": {
+    "Cobweb Sash": {
       "dex": 1,
       "int": 1
     },
-    "Utility Belt": {
+    "Bandolier of Stakes": {
       "att": 1,
       "dex": 1
     },
-    "Lanyard": {
+    "Hangman's Cord": {
       "dex": 2
     },
-    "Sash of Office": {
+    "Mummy Wrapping": {
       "att": 2,
       "int": 2
     },
-    "Cummerbund": {
+    "Cummerbund of the Count": {
       "att": 1,
       "int": 1
     }
   },
   "boots": {
-    "Wingtips": {
+    "Gravedigger Boots": {
       "att": 1,
       "dex": -1,
       "int": 1
     },
-    "Loafers": {},
-    "Combat Boots": {
+    "Witch's Buckled Shoes": {},
+    "Monster Platform Boots": {
       "att": 2,
       "cha": 2,
       "dex": -1,
       "int": 2
     },
-    "Sneakers": {
+    "Slippers of the Undead": {
       "dex": 1
     },
-    "Steel-Toed Boots": {
+    "Graveyard Stompers": {
       "att": 2
     }
   },
   "charm": {
-    "Campaign Pin": {
+    "Garlic Amulet": {
       "att": 1,
       "cha": 1,
       "int": 2,
       "luck": 1
     },
-    "Lucky Rabbit's Foot": {
+    "Rabbit's Foot": {
       "att": 1,
       "cha": 3,
       "int": 1,
       "luck": 1
     },
-    "Medal of Freedom": {
+    "Scarab Medallion": {
       "att": 2,
       "cha": 1,
       "int": 2
     },
-    "Classified Memo Fragment": {
+    "Cursed Mirror Shard": {
       "att": 3,
       "dex": 1,
       "int": 3,
@@ -66,31 +66,31 @@
     }
   },
   "chest": {
-    "Blazer": {
+    "Tattered Burial Shroud": {
       "att": 1,
       "cha": 1
     },
-    "Bulletproof Vest": {
+    "Stitched Monster Jacket": {
       "att": 3,
       "cha": 1,
       "dex": -2,
       "int": 2
     },
-    "Kevlar Vest": {
+    "Rib Cage Chestplate": {
       "att": 2,
       "cha": 2,
       "dex": -1,
       "int": 2,
       "luck": 1
     },
-    "Judicial Robes": {
+    "Witch's Robes": {
       "att": 0,
       "cha": 0,
       "dex": 2,
       "int": 2,
       "luck": 2
     },
-    "Suit Vest": {
+    "Vampire's Waistcoat": {
       "att": 1,
       "cha": 1,
       "dex": 3,
@@ -99,119 +99,119 @@
     }
   },
   "gloves": {
-    "Iron Handshake": {
+    "Zombie Fists": {
       "att": 2,
       "cha": -1,
       "dex": 2,
       "int": -2
     },
-    "Riot Gloves": {
+    "Werewolf Claws": {
       "att": 2,
       "cha": 1,
       "dex": -1,
       "int": 2
     },
-    "White Gloves": {
+    "Skeleton Gloves": {
       "dex": 1
     },
-    "Podium Grips": {
+    "Mad Scientist's Rubber Gloves": {
       "att": 1
     }
   },
   "head": {
-    "Top Hat": {
+    "Pumpkin Crown": {
       "att": 1,
       "cha": 3,
       "dex": 2,
       "int": 3,
       "luck": 2
     },
-    "Aviators": {
+    "Phantom's Half Mask": {
       "att": 1,
       "dex": 2,
       "luck": 1
     },
-    "Secret Service Earpiece": {
+    "Carved Jack-o'-Lantern": {
       "att": 2,
       "cha": 0,
       "dex": -1,
       "int": 2,
       "luck": 0
     },
-    "Bullhorn": {
+    "Vampire Fangs": {
       "att": 2
     },
-    "Campaign Mask": {
+    "Scream Mask": {
       "att": 1,
       "int": 1
     }
   },
   "left": {
-    "Riot Shield": {
+    "Coffin Lid": {
       "att": 3,
       "cha": 1,
       "dex": -2,
       "int": 1
     },
-    "Press Podium": {
+    "Holy Water Flask": {
       "att": 2,
       "int": 2
     },
-    "Podium": {
+    "Tombstone Shield": {
       "att": 1,
       "cha": 1,
       "int": 1
     },
-    "Briefing Book": {
+    "Book of the Dead": {
       "cha": 2,
       "dex": 2,
       "int": 3,
       "luck": 2
     },
-    "Constitution Copy": {
+    "Necronomicon": {
       "dex": -2,
       "int": 2,
       "luck": 2
     }
   },
   "legs": {
-    "Dress Slacks": {
+    "Scarecrow Overalls": {
       "att": 1,
       "cha": 1,
       "dex": 1,
       "int": 1
     },
-    "Shin Guards": {
+    "Bone Shin Guards": {
       "att": 2,
       "int": 2
     },
-    "Jogging Pants": {
+    "Cobweb Leggings": {
       "dex": 1,
       "luck": 1
     },
-    "Suit Pants": {
+    "Gargoyle Stone Greaves": {
       "att": 2,
       "cha": 1,
       "int": 2
     },
-    "Khakis": {
+    "Werewolf Pelt Leggings": {
       "att": 1,
       "dex": 2,
       "int": 1
     }
   },
   "neck": {
-    "Press Badge Chain": {
+    "Ghost's Chains": {
       "att": 2,
       "dex": 1,
       "int": 2,
       "luck": 1
     },
-    "Bow Tie": {
+    "Dracula's High Collar": {
       "att": 1,
       "int": 1
     },
-    "Ambassador's Chain": {
+    "Neck Bolts": {
       "att": 3,
       "cha": 2,
       "dex": 2,
@@ -220,65 +220,65 @@
     }
   },
   "right": {
-    "Veto Stamp": {
+    "Headsman's Axe": {
       "att": 1,
       "cha": -1
     },
-    "Autopen": {
+    "Sacrificial Dagger": {
       "att": 2,
       "dex": 2,
       "luck": 1
     },
-    "Ceremonial Sword": {
+    "Silver Sabre": {
       "att": 2,
       "cha": 1
     },
-    "Flagpole": {
+    "Witch's Broom": {
       "dex": 2,
       "int": 2,
       "luck": 1
     },
-    "Gavel": {
+    "Wooden Stake": {
       "att": 2
     }
   },
   "ring": {
-    "Signet Ring": {
+    "Skull Ring": {
       "att": 2,
       "cha": 1,
       "dex": 1,
       "int": 2,
       "luck": 1
     },
-    "Class Ring": {
+    "Spider Ring": {
       "att": 1,
       "cha": 1,
       "int": 1
     }
   },
   "two handed": {
-    "Presidential Podium": {
+    "Lightning Rod": {
       "cha": 3,
       "int": 5,
       "luck": 2
     },
-    "Filibuster Machine": {
+    "Silver Bolt Crossbow": {
       "att": 4,
       "cha": 2,
       "dex": 3,
       "luck": 2
     },
-    "Executive Order Pen": {
+    "Reaper's Scythe": {
       "att": 4,
       "cha": 2
     },
-    "Flag & Pole": {
+    "Villager's Pitchfork": {
       "cha": 1,
       "dex": 1,
       "int": 3,
       "luck": 1
     },
-    "Budget-Cutting Sledgehammer": {
+    "Torch and Pitchfork": {
       "att": 5,
       "dex": -2
     }

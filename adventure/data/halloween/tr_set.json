@@ -152,13 +152,13 @@
     "Basileus Guard": {"slot": ["left"], "set": "High Emperor","parts": 10, "att": 0, "cha": 30, "int": 0, "dex": 10, "luck": 0, "rarity": "set"},
     "Basileus Love": {"slot": ["charm"], "set": "High Emperor", "parts": 10, "att": 0, "cha": 30, "int": 0, "dex": 10, "luck": 0, "rarity": "set"},
 
-    "Air Force One Boarding Ramp": {"slot": ["boots"], "set": "Air Force One", "parts": 9, "att": 5, "cha": 10, "dex": 8, "rarity": "set"},
-    "Air Force One Cockpit Headset": {"slot": ["head"], "set": "Air Force One", "parts": 9, "att": 8, "cha": 8, "int": 8, "rarity": "set"},
-    "Air Force One Flight Jacket": {"slot": ["chest"], "set": "Air Force One", "parts": 9, "att": 10, "cha": 15, "dex": 5, "rarity": "set"},
-    "Air Force One Presidential Seal Ring": {"slot": ["ring"], "set": "Air Force One", "parts": 9, "cha": 20, "luck": 10, "rarity": "set"},
-    "Air Force One Secure Comms Charm": {"slot": ["charm"], "set": "Air Force One", "parts": 9, "int": 15, "luck": 5, "rarity": "set"},
-    "Air Force One Flag Pin Belt": {"slot": ["belt"], "set": "Air Force One", "parts": 9, "cha": 12, "int": 5, "rarity": "set"},
-    "Air Force One Flight Gloves": {"slot": ["gloves"], "set": "Air Force One", "parts": 9, "att": 5, "dex": 10, "rarity": "set"},
-    "Air Force One Flight Suit Leggings": {"slot": ["legs"], "set": "Air Force One", "parts": 9, "att": 8, "dex": 8, "rarity": "set"},
-    "Air Force One Communications Necklace": {"slot": ["neck"], "set": "Air Force One", "parts": 9, "cha": 10, "int": 10, "rarity": "set"}
+    "Monster Mash Neck Bolts": {"slot": ["neck"], "set": "Monster Mash", "parts": 9, "att": 10, "int": 10, "rarity": "set"},
+    "Monster Mash Dracula Cape": {"slot": ["chest"], "set": "Monster Mash", "parts": 9, "att": 10, "cha": 15, "dex": 5, "rarity": "set"},
+    "Monster Mash Mummy Wraps": {"slot": ["legs"], "set": "Monster Mash", "parts": 9, "att": 8, "dex": 8, "rarity": "set"},
+    "Monster Mash Wolf Man Claws": {"slot": ["gloves"], "set": "Monster Mash", "parts": 9, "att": 10, "dex": 5, "rarity": "set"},
+    "Monster Mash Bride's Beehive Wig": {"slot": ["head"], "set": "Monster Mash", "parts": 9, "att": 5, "cha": 8, "int": 8, "rarity": "set"},
+    "Monster Mash Gill-Man Flippers": {"slot": ["boots"], "set": "Monster Mash", "parts": 9, "att": 5, "dex": 12, "rarity": "set"},
+    "Monster Mash Phantom's Signet": {"slot": ["ring"], "set": "Monster Mash", "parts": 9, "cha": 15, "luck": 10, "rarity": "set"},
+    "Monster Mash Jack-o'-Lantern Charm": {"slot": ["charm"], "set": "Monster Mash", "parts": 9, "int": 10, "luck": 10, "rarity": "set"},
+    "Monster Mash Invisible Man Bandage Belt": {"slot": ["belt"], "set": "Monster Mash", "parts": 9, "att": 5, "int": 12, "rarity": "set"}
 }

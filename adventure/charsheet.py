@@ -1092,7 +1092,7 @@ class Character:
                 item_slots = item.slot
                 slot_name = item_slots.get_name()
                 mult = 2 if item.slot is Slot.two_handed else 1
-                if rarity_exclude is not None and item.rarity in rarity_exclude:
+                if rarity_exclude is not None and item.rarity.name in rarity_exclude:
                     continue
 
                 if no_match:
@@ -1246,6 +1246,7 @@ class Character:
             no_match=no_match,
             ignore_case=ignore_case,
             _except=_except,
+            rarity_exclude=rarity_exclude,
         )
         return bkpk
 

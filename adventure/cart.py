@@ -5,7 +5,7 @@ import logging
 import random
 import time
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import discord
 from redbot.core import commands
@@ -22,8 +22,29 @@ _ = Translator("Adventure", __file__)
 log = logging.getLogger("red.cogs.adventure")
 
 
+class ChestStock:
+    """A treasure chest offered by the cart.
+
+    Mimics the parts of `Item` the trader UI uses so it can sit in the same select menu.
+    """
+
+    def __init__(self, rarity: Rarities):
+        self.rarity = rarity
+        self.name = _("{rarity} Chest").format(rarity=rarity.get_name())
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def ansi(self) -> str:
+        return self.rarity.as_ansi(self.name)
+
+    def stat_str(self) -> str:
+        return _("Treasure chest, open with the loot command")
+
+
 class TraderModal(discord.ui.Modal):
-    def __init__(self, item: Item, cog: commands.Cog, view: Trader, ctx: commands.Context):
+    def __init__(self, item: Union[Item, ChestStock], cog: commands.Cog, view: Trader, ctx: commands.Context):
         super().__init__(title=_("How many would you like to buy?"))
         self.item = item
         self.cog = cog
@@ -79,26 +100,33 @@ class TraderModal(discord.ui.Modal):
                     log.exception("Error with the new character sheet", exc_info=exc)
                     return
 
-                if c.is_backpack_full(is_dev=is_dev(spender)):
-                    await interaction.response.send_message(
-                        _("**{author}**, Your backpack is currently full.").format(author=escape(spender.display_name))
-                    )
-                    return
                 item = self.item
-                item.owned = number
-                await c.add_to_backpack(item, number=number)
+                if isinstance(item, ChestStock):
+                    getattr(c.treasure, item.rarity.name).number += number
+                else:
+                    if c.is_backpack_full(is_dev=is_dev(spender)):
+                        await bank.deposit_credits(spender, price)
+                        await interaction.response.send_message(
+                            _("**{author}**, Your backpack is currently full.").format(
+                                author=escape(spender.display_name)
+                            )
+                        )
+                        return
+                    item.owned = number
+                    await c.add_to_backpack(item, number=number)
                 await self.cog.config.user(spender).set(await c.to_json(self.ctx, self.cog.config))
                 await interaction.response.send_message(
                     box(
                         _(
                             "{author} bought {p_result} {item_name} for "
-                            "{item_price} {currency_name} and put it into their backpack."
+                            "{item_price} {currency_name} and put it into their {destination}."
                         ).format(
                             author=escape(spender.display_name),
                             p_result=number,
                             item_name=item.ansi,
                             item_price=humanize_number(price),
                             currency_name=currency_name,
+                            destination=_("treasure") if isinstance(item, ChestStock) else _("backpack"),
                         ),
                         lang="ansi",
                     )
@@ -130,7 +158,7 @@ class TraderButton(discord.ui.Button):
 
 
 class TraderSelect(discord.ui.Select):
-    def __init__(self, items: List[Item], cog: commands.Cog):
+    def __init__(self, items: List[Union[Item, ChestStock]], cog: commands.Cog):
         self.items = items
         self.cog = cog
         self.select_options = [
@@ -216,9 +244,14 @@ class Trader(discord.ui.View):
             currency_name = "credits"
         table = None
         price_colour = ANSIBackgroundTextColours(ANSITextColours.white, ANSIBackgroundColours.orange)
+        chest_lines = []
         for index, item in enumerate(stock):
             item = stock[index]
             price = item["price"]
+            if isinstance(item["item"], ChestStock):
+                price_str = price_colour.as_str(f"{humanize_number(price)} {currency_name}")
+                chest_lines.append(f"{item['item'].ansi} - {price_str}")
+                continue
             price_str = f"{humanize_number(price)} {currency_name}"
             price_str = price_colour.as_str(price_str)
             if table is None:
@@ -236,6 +269,8 @@ class Trader(discord.ui.View):
                 table.rows.append([price_str])
                 table.rows.append(stats)
         text += str(table)
+        if chest_lines:
+            text += "\n" + _("I also have some treasure chests for sale:") + "\n" + "\n".join(chest_lines) + "\n"
         self.stock_str = text
         timestamp = f"<t:{int(self.end_time.timestamp())}:R>"
 
@@ -279,6 +314,8 @@ class Trader(discord.ui.View):
 
             self.items.update({item.name: {"itemname": item.name, "item": item, "price": price, "lvl": item.lvl}})
             # self.add_item(TraderButton(item, self.cog))
+        if await self.cog.config.enable_chests():
+            self.generate_chests()
         item_list = []
         for item, data in self.items.items():
             item_list.append(data["item"])
@@ -287,3 +324,26 @@ class Trader(discord.ui.View):
         for index, item in enumerate(self.items):
             output.update({index: self.items[item]})
         return output
+
+    def generate_chests(self):
+        # 50% chance the cart brings any chests at all, then 1-2 of them.
+        if random.random() >= 0.5:
+            return
+        for _i in range(random.randint(1, 2)):
+            rarity_roll = random.random()
+            # 10% set
+            if rarity_roll >= 0.9:
+                rarity = Rarities.set
+                price = random.randint(100000, 200000)
+            # 30% epic
+            elif rarity_roll >= 0.6:
+                rarity = Rarities.epic
+                price = random.randint(3000, 5000)
+            # 60% rare
+            else:
+                rarity = Rarities.rare
+                price = random.randint(1000, 2000)
+            chest = ChestStock(rarity)
+            if chest.name in self.items:
+                continue
+            self.items[chest.name] = {"itemname": chest.name, "item": chest, "price": price, "lvl": None}

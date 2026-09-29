@@ -315,10 +315,10 @@ class AdventureSetCommands(AdventureMixin):
         await self.config.guild(ctx.guild).embed.set(not toggle)
         await smart_embed(ctx, _("Embeds: {}").format(not toggle))
 
-    @adventureset.command(aliases=["chests"], enabled=False, hidden=True)
+    @adventureset.command(aliases=["chests"])
     @commands.is_owner()
     async def cartchests(self, ctx: commands.Context):
-        """[Admin] Set whether or not to sell chests in the cart."""
+        """[Owner] Set whether or not to sell chests in the cart."""
         toggle = await self.config.enable_chests()
         await self.config.enable_chests.set(not toggle)
         await smart_embed(ctx, _("Carts can sell chests: {}").format(not toggle))
@@ -508,7 +508,7 @@ class AdventureSetCommands(AdventureMixin):
             cart_channel_lock_override = _("No channel lock present.")
 
         cart_timeout = parse_timedelta(f"{guild_data['cart_timeout']} seconds")
-        # lootbox_in_carts = _("Allowed") if global_data["enable_chests"] else _("Not allowed")
+        lootbox_in_carts = _("Allowed") if global_data["enable_chests"] else _("Not allowed")
 
         if not await bank.is_global():
             rebirth_cost = guild_data["rebirth_cost"]
@@ -605,9 +605,9 @@ class AdventureSetCommands(AdventureMixin):
             cart_channel_lock_override=cart_channel_lock_override
         )
         msg += _("[Cart timeout (hh:mm:ss)]:              {cart_timeout}\n").format(cart_timeout=cart_timeout)
-        # msg += _("[Lootboxes in carts]:                   {lootbox_in_carts}\n").format(
-        #     lootbox_in_carts=lootbox_in_carts
-        # )
+        msg += _("[Lootboxes in carts]:                   {lootbox_in_carts}\n").format(
+            lootbox_in_carts=lootbox_in_carts
+        )
         msg += economy_string
         msg += daily_bonus_string
         if is_owner:
