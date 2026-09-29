@@ -83,60 +83,80 @@ class TraderModal(discord.ui.Modal):
         if number < 0:
             await self.wasting_time(interaction)
             return
+        await buy_item(interaction, self.item, number, self.cog, self.view, self.ctx)
 
-        currency_name = await bank.get_currency_name(
-            interaction.guild,
-        )
-        if currency_name.startswith("<"):
-            currency_name = "credits"
-        spender = interaction.user
-        price = self.view.items.get(self.item.name, {}).get("price") * number
-        if await bank.can_spend(spender, price):
-            await bank.withdraw_credits(spender, price)
-            async with self.cog.get_lock(spender):
-                try:
-                    c = await Character.from_json(self.ctx, self.cog.config, spender, self.cog._daily_bonus)
-                except Exception as exc:
-                    log.exception("Error with the new character sheet", exc_info=exc)
-                    return
 
-                item = self.item
-                if isinstance(item, ChestStock):
-                    getattr(c.treasure, item.rarity.name).number += number
-                else:
-                    if c.is_backpack_full(is_dev=is_dev(spender)):
-                        await bank.deposit_credits(spender, price)
-                        await interaction.response.send_message(
-                            _("**{author}**, Your backpack is currently full.").format(
-                                author=escape(spender.display_name)
-                            )
-                        )
-                        return
-                    item.owned = number
-                    await c.add_to_backpack(item, number=number)
-                await self.cog.config.user(spender).set(await c.to_json(self.ctx, self.cog.config))
-                await interaction.response.send_message(
-                    box(
-                        _(
-                            "{author} bought {p_result} {item_name} for "
-                            "{item_price} {currency_name} and put it into their {destination}."
-                        ).format(
-                            author=escape(spender.display_name),
-                            p_result=number,
-                            item_name=item.ansi,
-                            item_price=humanize_number(price),
-                            currency_name=currency_name,
-                            destination=_("treasure") if isinstance(item, ChestStock) else _("backpack"),
-                        ),
-                        lang="ansi",
-                    )
-                )
-        else:
+async def buy_item(
+    interaction: discord.Interaction,
+    item: Union[Item, ChestStock],
+    number: int,
+    cog: commands.Cog,
+    view: Trader,
+    ctx: commands.Context,
+):
+    spender = interaction.user
+    is_chest = isinstance(item, ChestStock)
+    if is_chest:
+        # One chest per person per cart visit. Claim the slot before any await so double clicks can't both pass.
+        if spender.id in view.chest_buyers:
             await interaction.response.send_message(
-                _("**{author}**, you do not have enough {currency_name}.").format(
-                    author=escape(spender.display_name), currency_name=currency_name
+                _("You've already bought a chest from {cart_name}.").format(cart_name=view.cart_name), ephemeral=True
+            )
+            return
+        view.chest_buyers.add(spender.id)
+    currency_name = await bank.get_currency_name(
+        interaction.guild,
+    )
+    if currency_name.startswith("<"):
+        currency_name = "credits"
+    price = view.items.get(item.name, {}).get("price") * number
+    if await bank.can_spend(spender, price):
+        await bank.withdraw_credits(spender, price)
+        async with cog.get_lock(spender):
+            try:
+                c = await Character.from_json(ctx, cog.config, spender, cog._daily_bonus)
+            except Exception as exc:
+                log.exception("Error with the new character sheet", exc_info=exc)
+                return
+
+            if isinstance(item, ChestStock):
+                getattr(c.treasure, item.rarity.name).number += number
+            else:
+                if c.is_backpack_full(is_dev=is_dev(spender)):
+                    await bank.deposit_credits(spender, price)
+                    await interaction.response.send_message(
+                        _("**{author}**, Your backpack is currently full.").format(
+                            author=escape(spender.display_name)
+                        )
+                    )
+                    return
+                item.owned = number
+                await c.add_to_backpack(item, number=number)
+            await cog.config.user(spender).set(await c.to_json(ctx, cog.config))
+            await interaction.response.send_message(
+                box(
+                    _(
+                        "{author} bought {p_result} {item_name} for "
+                        "{item_price} {currency_name} and put it into their {destination}."
+                    ).format(
+                        author=escape(spender.display_name),
+                        p_result=number,
+                        item_name=item.ansi,
+                        item_price=humanize_number(price),
+                        currency_name=currency_name,
+                        destination=_("treasure") if isinstance(item, ChestStock) else _("backpack"),
+                    ),
+                    lang="ansi",
                 )
             )
+    else:
+        if is_chest:
+            view.chest_buyers.discard(spender.id)
+        await interaction.response.send_message(
+            _("**{author}**, you do not have enough {currency_name}.").format(
+                author=escape(spender.display_name), currency_name=currency_name
+            )
+        )
 
 
 class TraderButton(discord.ui.Button):
@@ -152,6 +172,10 @@ class TraderButton(discord.ui.Button):
             await interaction.response.send_message(
                 _("{cart_name} has moved onto the next village.").format(cart_name=self.view.cart_name), ephemeral=True
             )
+            return
+        if isinstance(self.item, ChestStock):
+            # Chests are limited to one per purchase, so skip the amount prompt.
+            await buy_item(interaction, self.item, 1, self.cog, self.view, self.view.ctx)
             return
         modal = TraderModal(self.item, self.cog, view=self.view, ctx=self.view.ctx)
         await interaction.response.send_modal(modal)
@@ -177,7 +201,12 @@ class TraderSelect(discord.ui.Select):
                 _("{cart_name} has moved onto the next village.").format(cart_name=self.view.cart_name), ephemeral=True
             )
             return
-        modal = TraderModal(self.items[int(self.values[0])], self.cog, view=self.view, ctx=self.view.ctx)
+        item = self.items[int(self.values[0])]
+        if isinstance(item, ChestStock):
+            # Chests are limited to one per purchase, so skip the amount prompt.
+            await buy_item(interaction, item, 1, self.cog, self.view, self.view.ctx)
+            return
+        modal = TraderModal(item, self.cog, view=self.view, ctx=self.view.ctx)
         await interaction.response.send_modal(modal)
 
 
@@ -187,6 +216,7 @@ class Trader(discord.ui.View):
         self.cog = cog
         self.ctx = ctx
         self.items = {}
+        self.chest_buyers = set()
         self.message = None
         self.stock_str = ""
         self.end_time = datetime.now(timezone.utc) + timedelta(seconds=timeout)
@@ -331,18 +361,18 @@ class Trader(discord.ui.View):
             return
         for _i in range(random.randint(1, 2)):
             rarity_roll = random.random()
-            # 10% set
-            if rarity_roll >= 0.9:
+            # 90% set
+            if rarity_roll >= 0.1:
                 rarity = Rarities.set
-                price = random.randint(100000, 200000)
-            # 30% epic
-            elif rarity_roll >= 0.6:
-                rarity = Rarities.epic
-                price = random.randint(3000, 5000)
+                price = random.randint(200000, 300000)
+            # # 30% epic
+            # elif rarity_roll >= 0.6:
+            #     rarity = Rarities.epic
+            #     price = random.randint(3000, 5000)
             # 60% rare
             else:
-                rarity = Rarities.rare
-                price = random.randint(1000, 2000)
+                rarity = Rarities.ascended
+                price = random.randint(100000, 200000)
             chest = ChestStock(rarity)
             if chest.name in self.items:
                 continue

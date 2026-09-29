@@ -206,21 +206,26 @@ class EconomyCommands(AdventureMixin):
     @commands_atransfer.command(name="give")
     @commands.is_owner()
     async def commands_atransfer_give(self, ctx: commands.Context, amount: int, *players: discord.Member):
-        """[Owner] Give gold to adventurers."""
-        if amount <= 0:
+        """[Owner] Give gold to adventurers. Use a negative amount to take gold away."""
+        if amount == 0:
             await smart_embed(
                 ctx,
-                _("{author.mention} You can't give 0 or negative values.").format(author=ctx.author),
+                _("{author.mention} You can't give 0.").format(author=ctx.author),
             )
             return
         players_string = ""
         for player in players:
-            try:
-                await bank.deposit_credits(member=player, amount=amount)
-                players_string += f"{player.display_name}\n"
-            except BalanceTooHigh as exc:
-                await bank.set_balance(member=player, amount=exc.max_balance)
-                players_string += f"{player.display_name}\n"
+            if amount > 0:
+                try:
+                    await bank.deposit_credits(member=player, amount=amount)
+                except BalanceTooHigh as exc:
+                    await bank.set_balance(member=player, amount=exc.max_balance)
+            else:
+                try:
+                    await bank.withdraw_credits(member=player, amount=-amount)
+                except ValueError:
+                    await bank.set_balance(member=player, amount=0)
+            players_string += f"{player.display_name}\n"
 
         await smart_embed(
             ctx,
