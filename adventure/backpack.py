@@ -265,6 +265,13 @@ class BackPackCommands(AdventureMixin):
                 )
 
             equip = c.backpack.get(equip_item.name)
+            if not equip:
+                return await smart_embed(
+                    ctx,
+                    _("{author}, you don't have {item} in your backpack.").format(
+                        author=escape(ctx.author.display_name), item=equip_item.name
+                    ),
+                )
             if equip:
                 slot = equip.slot
                 put = getattr(c, equip.slot.char_slot)

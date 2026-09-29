@@ -987,7 +987,7 @@ class ClassAbilities(AdventureMixin):
                     await view.wait()
                     if view.item_name is not None:
                         newitem.name = view.item_name
-                    if view.confirmed:  # user picked a device to replace.
+                    if view.confirmed and view.replace_item is not None:  # user picked a device to replace.
                         c.heroclass["cooldown"] = time.time() + cooldown_time
                         replaced = view.replace_item
                         created_item = box(

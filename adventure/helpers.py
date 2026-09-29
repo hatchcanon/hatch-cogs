@@ -214,8 +214,15 @@ class NameModal(discord.ui.Modal):
         self.view = view
 
     async def on_submit(self, interaction: discord.Interaction):
-        await interaction.response.defer()
         self.view.item_name = self.name.value
+        if isinstance(self.view, ForgeReplaceView):
+            # Naming alone can't finish a replace; the user still has to pick which device to replace.
+            await interaction.response.send_message(
+                _("Name set to **{name}**. Now select the device to replace.").format(name=self.name.value),
+                ephemeral=True,
+            )
+            return
+        await interaction.response.defer()
         self.view.confirmed = True
         self.view.stop()
 
