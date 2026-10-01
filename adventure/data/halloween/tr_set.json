@@ -43,6 +43,16 @@
     "Basileus Guard": {"slot": ["left"], "set": "High Emperor","parts": 10, "att": 0, "cha": 30, "int": 0, "dex": 10, "luck": 0, "rarity": "set"},
     "Basileus Love": {"slot": ["charm"], "set": "High Emperor", "parts": 10, "att": 0, "cha": 30, "int": 0, "dex": 10, "luck": 0, "rarity": "set"},
 
+    "Dreadnaught Gauntlets": {"slot": ["gloves"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "War Axe Of The Dreadnaught": {"slot": ["left", "right"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Dreadnaught Helmet": {"slot": ["head"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Dreadnaught Breastplate": {"slot": ["chest"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Dreadnaught Sabatons": {"slot": ["boots"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Dreadnaught Waistguard": {"slot": ["legs"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Dreadnaught Legplates": {"slot": ["belt"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Necklace Of The Dreadnaught": {"slot": ["neck"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+    "Ring Of The Dreadnaught": {"slot": ["ring"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
+
     "Monster Mash Neck Bolts": {"slot": ["neck"], "set": "Monster Mash", "parts": 9, "att": 10, "int": 10, "rarity": "set"},
     "Monster Mash Dracula Cape": {"slot": ["chest"], "set": "Monster Mash", "parts": 9, "att": 10, "cha": 15, "dex": 5, "rarity": "set"},
     "Monster Mash Mummy Wraps": {"slot": ["legs"], "set": "Monster Mash", "parts": 9, "att": 8, "dex": 8, "rarity": "set"},
