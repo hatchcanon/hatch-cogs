@@ -1,7 +1,9 @@
 import io
 import logging
+import os
 import re
 from typing import Optional
+from urllib.parse import urlparse
 
 import aiohttp
 import discord
@@ -11,6 +13,7 @@ from redbot.core.bot import Red
 log = logging.getLogger("red.emojisteal")
 
 PAGE_SIZE = 20
+EMOJI_MAX_BYTES = 256 * 1024
 
 
 class EmojiSteal(commands.Cog):
@@ -57,45 +60,66 @@ class EmojiSteal(commands.Cog):
     @commands.bot_has_permissions(manage_emojis_and_stickers=True)
     @commands.has_permissions(manage_emojis_and_stickers=True)
     @app_commands.describe(
-        emoji="The custom emoji to copy (paste it, e.g. :thing:)",
+        emoji="The custom emoji to copy (paste it, e.g. :thing:) or an image URL",
         name="Optional name for the new emoji",
     )
     async def emoji_copy(
         self,
         ctx: commands.Context,
-        emoji: discord.PartialEmoji,
+        emoji: str,
         *,
         name: Optional[str] = None,
     ):
-        """Copy a custom emoji into this server.
+        """Copy a custom emoji into this server, or make one from an image URL.
 
-        Paste the emoji itself (e.g. `[p]emote copy :thing: newname`).
+        Paste the emoji itself (e.g. `[p]emote copy :thing: newname`)
+        or an image link (e.g. `[p]emote copy https://example.com/cat.png cat`).
         """
         await ctx.defer()
 
-        if emoji.id is None:
-            await ctx.send("That's a default Discord emoji, there's nothing to copy.")
-            return
+        source = emoji.strip().strip("<>")
+        if re.match(r"^https?://", source, re.IGNORECASE):
+            url = source
+            default_name = os.path.splitext(os.path.basename(urlparse(url).path))[0]
+        else:
+            partial = discord.PartialEmoji.from_str(emoji.strip())
+            if partial.id is None:
+                await ctx.send("That's not a custom emoji or an image URL, there's nothing to copy.")
+                return
+            url = str(partial.url)
+            default_name = partial.name
 
         if len(ctx.guild.emojis) >= ctx.guild.emoji_limit:
             await ctx.send(f"This server is already at its emoji limit ({ctx.guild.emoji_limit}).")
             return
 
-        emoji_name = re.sub(r"[^a-zA-Z0-9_]", "", name or emoji.name) or "emoji"
+        emoji_name = re.sub(r"[^a-zA-Z0-9_]", "", name or default_name or "") or "emoji"
         emoji_name = emoji_name[:32].ljust(2, "_")
 
         try:
-            async with self.session.get(str(emoji.url)) as resp:
+            async with self.session.get(url) as resp:
                 if resp.status != 200:
-                    await ctx.send("Couldn't download that emoji.")
+                    await ctx.send("Couldn't download that image.")
+                    return
+                if not resp.content_type.startswith("image/"):
+                    await ctx.send("That link doesn't point to an image.")
                     return
                 image_bytes = await resp.read()
+
+            if len(image_bytes) > EMOJI_MAX_BYTES:
+                await ctx.send(
+                    f"That image is {len(image_bytes) // 1024} KB, Discord emojis must be 256 KB or smaller."
+                )
+                return
 
             new_emoji = await ctx.guild.create_custom_emoji(
                 name=emoji_name,
                 image=image_bytes,
                 reason=f"Copied by {ctx.author} ({ctx.author.id})",
             )
+        except aiohttp.ClientError:
+            await ctx.send("Couldn't download that image.")
+            return
         except discord.HTTPException as e:
             await ctx.send(f"Failed to create emoji: {getattr(e, 'text', e)}")
             return
