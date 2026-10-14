@@ -4,9 +4,9 @@
     ],
     "description": "Provides strategic guidance for adventure encounters based on enemy attributes",
     "disabled": false,
-    "end_user_data_statement": "This cog does not store any user data.",
+    "end_user_data_statement": "This cog stores a history of your Adventure gold balance and level, keyed by your Discord user ID, to draw stats charts. It will respect data deletion requests.",
     "hidden": false,
-    "install_msg": "Thank you for installing AdventureHelper! Make sure you're running the latest version of adventure from https://github.com/aikaterna/gobcog. Use `[p]adventurehelper toggle` to enable/disable the helper in your server.",
+    "install_msg": "Thank you for installing AdventureHelper! Make sure you're running the latest version of adventure from https://github.com/hatchcanon/hatch-cogs. Use `[p]adventurehelper toggle` to enable/disable the helper in your server.",
     "max_bot_version": "0.0.0",
     "min_bot_version": "3.5.0",
     "min_python_version": [
@@ -17,9 +17,9 @@
     "name": "AdventureHelper",
     "permissions": [],
     "required_cogs": {
-        "adventure": "https://github.com/aikaterna/gobcog/"
+        "adventure": "https://github.com/hatchcanon/hatch-cogs"
     },
-    "requirements": [],
+    "requirements": ["matplotlib"],
     "short": "Strategic guidance for adventure encounters",
     "tags": [
         "fun",

@@ -7,6 +7,7 @@ from redbot.core import Config, checks, commands
 from redbot.core.i18n import Translator, cog_i18n
 
 from .listeners import AdventureHelperListeners
+from .stats import AdventureStats
 
 _ = Translator("AdventureHelper", __file__)
 
@@ -26,12 +27,13 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 @cog_i18n(_)
 class AdventureHelper(
     AdventureHelperListeners,
+    AdventureStats,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
     """Provide strategic guidance for adventure encounters based on enemy attributes"""
 
-    __version__ = "1.1.0"
+    __version__ = "1.2.0"
     __author__ = ["hatch"]
 
     def __init__(self, bot):
@@ -48,6 +50,12 @@ class AdventureHelper(
         pre_processed = super().format_help_for_context(ctx)
         return f"{pre_processed}\n\nCog Version: {self.__version__}"
 
+    async def cog_load(self) -> None:
+        await self._stats_load()
+
+    async def cog_unload(self) -> None:
+        await self._stats_unload()
+
     async def red_delete_data_for_user(
         self,
         *,
@@ -57,8 +65,7 @@ class AdventureHelper(
         """
         Method for finding users data inside the cog and deleting it.
         """
-        # This cog doesn't store user-specific data
-        pass
+        await self.stats_db.delete_user(user_id)
 
     @commands.group()
     @commands.guild_only()

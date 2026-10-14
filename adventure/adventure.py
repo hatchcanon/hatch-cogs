@@ -2505,6 +2505,8 @@ class Adventure(
             if special:
                 c.treasure += special
             await self.config.user(user).set(await c.to_json(ctx, self.config))
+            if c.lvl != lvl_start:
+                self.bot.dispatch("adventure_level_change", user, lvl_start, c.lvl, c.exp, c.rebirths)
             return rebirth_text
 
     async def _adv_countdown(self, ctx: commands.Context, seconds, title) -> asyncio.Task:

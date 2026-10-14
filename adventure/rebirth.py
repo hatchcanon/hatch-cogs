@@ -143,4 +143,14 @@ class RebirthCommands(AdventureMixin):
                 embed=None,
                 view=None,
             )
-            await self.config.user(ctx.author).set(await c.rebirth())
+            old_lvl = c.lvl
+            new_data = await c.rebirth()
+            await self.config.user(ctx.author).set(new_data)
+            self.bot.dispatch(
+                "adventure_level_change",
+                ctx.author,
+                old_lvl,
+                new_data["lvl"],
+                new_data["exp"],
+                new_data["rebirths"],
+            )

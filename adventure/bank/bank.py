@@ -226,7 +226,10 @@ async def set_balance(member: Union[discord.Member, discord.User], amount: int, 
         currency = await get_currency_name(guild)
         raise errors.BalanceTooHigh(user=member.display_name, max_balance=max_bal, currency_name=currency)
     group = _config.user(member)
+    old_amount = await group.balance()
     await group.balance.set(amount)
+    if old_amount != amount:
+        _bot.dispatch("adventure_bank_set_balance", member, old_amount, amount)
     return amount
 
 
