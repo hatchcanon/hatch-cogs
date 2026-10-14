@@ -150,7 +150,7 @@ class AdventureStats(MixinMeta):
         ids = sorted((uid for uid in latest if guild.get_member(uid) is not None), key=rank, reverse=True)
         return [guild.get_member(uid) for uid in ids[:DEFAULT_COMPARE]]
 
-    @commands.group(name="advstats", aliases=["adventurestats"])
+    @commands.group(name="advstats")
     @commands.guild_only()
     async def advstats(self, ctx: commands.Context) -> None:
         """Charts of adventure gold and level history."""
