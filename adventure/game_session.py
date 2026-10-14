@@ -477,7 +477,7 @@ class GameSession(discord.ui.View):
         self.no_monster = kwargs.get("no_monster", False)
         self.possessed = self.attribute == " possessed"
         self.immortal = self.attribute == "n immortal"
-        self.ascended = "Ascended" in self.challenge
+        self.ascended = "Ascended" in (self.challenge or "")
         self.rng = kwargs["rng"]
         super().__init__(timeout=self.timer)
         self.attack_button = ActionButton(Action.fight)

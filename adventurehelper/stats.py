@@ -58,15 +58,19 @@ class AdventureStats(MixinMeta):
         super().__init__(*args)
         self.stats_db = StatsDB(cog_data_path(raw_name="AdventureHelper") / "stats.db")
         self._flush_task: Optional[asyncio.Task] = None
+        self._seed_task: Optional[asyncio.Task] = None
 
     async def _stats_load(self) -> None:
         await self.stats_db.open()
         self._flush_task = asyncio.create_task(self._flush_loop())
-        asyncio.create_task(self._seed_snapshot())
+        self._seed_task = asyncio.create_task(self._seed_snapshot())
 
     async def _stats_unload(self) -> None:
-        if self._flush_task:
-            self._flush_task.cancel()
+        # Stop background work before closing so nothing touches a closed connection.
+        for task in (self._flush_task, self._seed_task):
+            if task:
+                task.cancel()
+        await asyncio.gather(*(t for t in (self._flush_task, self._seed_task) if t), return_exceptions=True)
         await self.stats_db.close()
 
     async def _flush_loop(self) -> None:
