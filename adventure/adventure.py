@@ -703,7 +703,17 @@ class Adventure(
                 possible_monsters.append(m)
 
         if len(possible_monsters) == 0:
-            choice = rng.choice(list(monsters.keys()) * 3)
+            # Nothing fits the group's range; use the monsters nearest to it so
+            # very strong (or very weak) groups still get appropriate challenges.
+            low = int(stat_range.min_stat) * 0.5
+            high = int(stat_range.max_stat) * 1.2
+
+            def distance(item):
+                main_stat = item[1]["hp"] if (stat_range.stat_type == "hp") else item[1]["dipl"]
+                return max(low - main_stat, main_stat - high, 0)
+
+            closest = sorted(monsters.items(), key=distance)[:5]
+            choice = rng.choice([m for m, stats in closest])
         else:
             choice = rng.choice(possible_monsters)
         return choice

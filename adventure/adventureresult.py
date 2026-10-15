@@ -81,6 +81,9 @@ class AdventureResults:
         stat_type: str = "hp"
         win_percent: float = 0.0
         if len(self._last_raids.get(guild.id, [])) == 0:
+            # No history yet (e.g. after a reload); assume an average win rate
+            # instead of 0% so the first adventure isn't forced into the easiest tier.
+            win_percent = 0.5
             return StatRange(stat_type=stat_type, min_stat=min_stat, max_stat=max_stat, win_percent=win_percent)
 
         # tally up stats for raids
