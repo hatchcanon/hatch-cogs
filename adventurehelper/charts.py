@@ -146,6 +146,28 @@ def level_chart(name: str, period_label: str, points, start: Optional[float], no
     return _finish(fig, ax, start if start is not None else points[0][0], now)
 
 
+def rebirth_chart(name: str, period_label: str, points, start: Optional[float], now: float) -> io.BytesIO:
+    """points are (ts, lvl, rebirths)."""
+    xs, ys = _extend_to_now([(ts, rb) for ts, _, rb in points], now)
+    gained = ys[-1] - ys[0]
+    fig, ax = _new_figure(
+        f"{name} · Rebirths",
+        f"{period_label} · rebirth {ys[-1]} · gained {_signed(gained)}",
+        "Rebirths",
+    )
+    color = SERIES[0]
+    ax.step(xs, ys, where="post", color=color, linewidth=2)
+    ax.fill_between(xs, ys, step="post", color=color, alpha=0.15, linewidth=0)
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_ylim(bottom=0, top=max(ys) + 1)
+
+    # Dot each rebirth so individual steps stay visible on long periods.
+    for (_, _, prev_rb), (ts, _, rb) in zip(points, points[1:]):
+        if rb > prev_rb:
+            ax.plot([_to_dt(ts)], [rb], "o", color=color, markersize=6, markeredgecolor=SURFACE, markeredgewidth=1.5)
+    return _finish(fig, ax, start if start is not None else points[0][0], now)
+
+
 def compare_chart(
     metric: str, period_label: str, series: Sequence[Series], start: Optional[float], now: float
 ) -> io.BytesIO:

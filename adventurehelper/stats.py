@@ -202,6 +202,29 @@ class AdventureStats(MixinMeta):
             file = await self._render(charts.level_chart, member.display_name, period.label, points, since, now)
         await ctx.send(file=file)
 
+    @advstats.command(name="rebirth", aliases=["rebirths"])
+    @commands.bot_has_permissions(attach_files=True)
+    async def advstats_rebirth(
+        self, ctx: commands.Context, member: Optional[discord.Member] = None, period: Period = DEFAULT_PERIOD
+    ) -> None:
+        """Chart a player's rebirths over time.
+
+        Period looks like `24h`, `7d`, `4w` or `all` (default `30d`).
+        Example: `[p]advstats rebirth @someone all`
+        """
+        member = member or ctx.author
+        now = time.time()
+        since = period.since(now)
+        async with ctx.typing():
+            data = await self.stats_db.level_series([member.id], since or 0)
+            points = data.get(member.id)
+            if not points:
+                return await ctx.send(
+                    _("No rebirth history recorded for {name} yet.").format(name=member.display_name)
+                )
+            file = await self._render(charts.rebirth_chart, member.display_name, period.label, points, since, now)
+        await ctx.send(file=file)
+
     @advstats.group(name="compare")
     async def advstats_compare(self, ctx: commands.Context) -> None:
         """Compare several players on one chart."""
@@ -220,7 +243,8 @@ class AdventureStats(MixinMeta):
                 data = await self.stats_db.gold_series([m.id for m in members], since or 0)
             else:
                 raw = await self.stats_db.level_series([m.id for m in members], since or 0)
-                data = {uid: [(ts, lvl) for ts, lvl, _ in rows] for uid, rows in raw.items()}
+                col = 2 if metric == "rebirths" else 1
+                data = {uid: [(row[0], row[col]) for row in rows] for uid, rows in raw.items()}
             series = [(m.display_name, data[m.id]) for m in members if m.id in data]
             if len(series) < 2:
                 return await ctx.send(_("Not enough recorded history to compare yet."))
@@ -250,3 +274,15 @@ class AdventureStats(MixinMeta):
         Example: `[p]advstats compare level @a @b all`
         """
         await self._compare(ctx, "level", members, period)
+
+    @advstats_compare.command(name="rebirth", aliases=["rebirths"])
+    @commands.bot_has_permissions(attach_files=True)
+    async def advstats_compare_rebirth(
+        self, ctx: commands.Context, members: commands.Greedy[discord.Member], period: Period = DEFAULT_PERIOD
+    ) -> None:
+        """Compare rebirths between players.
+
+        With no players given, compares this server's top 5 by rebirth then level.
+        Example: `[p]advstats compare rebirth @a @b all`
+        """
+        await self._compare(ctx, "rebirths", members, period)
