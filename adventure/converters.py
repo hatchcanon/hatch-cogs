@@ -138,7 +138,7 @@ class SlotConverter(Transformer):
         if argument:
             try:
                 return Slot.get_from_name(argument)
-            except ValueError:
+            except (KeyError, ValueError):
                 raise BadArgument(
                     _("{provided} is not a valid slot, select one of {slots}").format(
                         provided=argument, slots=humanize_list([i.get_name() for i in Slot])

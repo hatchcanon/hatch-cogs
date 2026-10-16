@@ -82,15 +82,19 @@ class DevCommands(AdventureMixin):
     async def genitems(
         self,
         ctx: commands.Context,
+        member: Optional[discord.Member],
         rarity: RarityConverter,
-        slot: SlotConverter,
+        slot: Optional[SlotConverter] = None,
         num: int = 1,
     ):
-        """[Dev] Generate random items."""
+        """[Dev] Generate random items.
+
+        Optionally mention a member first to generate items for them instead of yourself.
+        Leave out the slot to get a random slot for each item.
+        """
         if not await self.no_dev_prompt(ctx):
             return
-        user = ctx.author
-        slot = slot.lower()
+        user = member or ctx.author
         async with self.get_lock(user):
             try:
                 c = await Character.from_json(ctx, self.config, user, self._daily_bonus)
@@ -99,8 +103,11 @@ class DevCommands(AdventureMixin):
                 return
             for _loop_counter in range(num):
                 await c.add_to_backpack(await self._genitem(ctx, rarity, slot))
-            await self.config.user(ctx.author).set(await c.to_json(ctx, self.config))
-        await ctx.invoke(self._backpack)
+            await self.config.user(user).set(await c.to_json(ctx, self.config))
+        if user == ctx.author:
+            await ctx.invoke(self._backpack)
+        else:
+            await ctx.send(f"Generated {num} {rarity.get_name()} {slot or 'random slot'} item(s) for {user.display_name}.")
 
     @commands.command()
     @commands.bot_has_permissions(add_reactions=True)
