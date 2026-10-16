@@ -364,7 +364,7 @@ class Trader(discord.ui.View):
             # 90% set
             if rarity_roll >= 0.1:
                 rarity = Rarities.set
-                price = random.randint(200000, 300000)
+                price = random.randint(2000000, 10000000)
             # # 30% epic
             # elif rarity_roll >= 0.6:
             #     rarity = Rarities.epic
