@@ -206,6 +206,10 @@ class AdventureHelper(
         else:
             await ctx.send("No chests to loot.")
 
+        msg = copy(ctx.message)
+        msg.content = f"{ctx.prefix}cbackpack sell --no-match Set"
+        await self.bot.process_commands(msg)
+
     @commands.command(name="nvm")
     @commands.guild_only()
     async def nvm(self, ctx: commands.Context) -> None:
