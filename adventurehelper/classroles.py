@@ -133,6 +133,55 @@ class AdventureClassRoles(MixinMeta):
             lines.append(f"**{clz.class_name}**: {role.name if role else _('not set')}")
         await ctx.send("\n".join(lines))
 
+    @classrole.command(name="setup")
+    @commands.bot_has_permissions(manage_roles=True)
+    async def classrole_setup(self, ctx: commands.Context) -> None:
+        """Create and link a role for every class that doesn't have one
+
+        Roles are colored to match the class colors in Adventure. Hero is skipped.
+        """
+        hero_classes = self._hero_classes()
+        if hero_classes is None:
+            return await ctx.send(_("Adventure cog not found."))
+        colours = {
+            "wizard": discord.Colour.blue(),
+            "tinkerer": discord.Colour.magenta(),
+            "berserker": discord.Colour.red(),
+            "cleric": discord.Colour.light_grey(),
+            "ranger": discord.Colour.green(),
+            "bard": discord.Colour.gold(),
+            "psychic": discord.Colour.teal(),
+        }
+        created = []
+        failed = False
+        async with self.config.guild(ctx.guild).class_roles() as class_roles:
+            for clz in hero_classes:
+                if clz is hero_classes.hero or ctx.guild.get_role(class_roles.get(clz.value, 0)):
+                    continue
+                try:
+                    role = await ctx.guild.create_role(
+                        name=clz.class_name,
+                        colour=colours.get(clz.value, discord.Colour.default()),
+                        reason=_("Adventure class role setup"),
+                    )
+                except discord.HTTPException as e:
+                    log.warning(f"Could not create class role for {clz.value} in {ctx.guild}: {e}")
+                    failed = True
+                    break
+                class_roles[clz.value] = role.id
+                created.append(role.name)
+        if failed:
+            await ctx.send(_("I couldn't create every role. Check my permissions and the server's role limit."))
+        if not created:
+            if not failed:
+                await ctx.send(_("Every class already has a role."))
+            return
+        await ctx.send(
+            _("Created and linked: {roles}\nRun `{prefix}classrole sync` to give existing players their roles.").format(
+                roles=", ".join(created), prefix=ctx.clean_prefix
+            )
+        )
+
     @classrole.command(name="sync")
     @commands.bot_has_permissions(manage_roles=True)
     async def classrole_sync(self, ctx: commands.Context) -> None:
