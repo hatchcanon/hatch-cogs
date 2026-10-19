@@ -239,6 +239,7 @@ class ClassAbilities(AdventureMixin):
                     elif c.hc is HeroClasses.psychic:
                         c.heroclass["cooldown"] = max(300, (900 - max((c.luck - c.total_cha) * 2, 0))) + time.time()
                     await self.config.user(ctx.author).set(await c.to_json(ctx, self.config))
+                    self.bot.dispatch("adventure_class_change", ctx.author, current_class, clz)
                     await self._clear_react(class_msg)
                     await class_msg.edit(content=box(now_class_msg, lang="ansi"), view=None)
                     try:

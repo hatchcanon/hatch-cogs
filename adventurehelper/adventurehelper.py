@@ -6,6 +6,7 @@ import discord
 from redbot.core import Config, checks, commands
 from redbot.core.i18n import Translator, cog_i18n
 
+from .classroles import AdventureClassRoles
 from .listeners import AdventureHelperListeners
 from .stats import AdventureStats
 
@@ -28,12 +29,13 @@ class CompositeMetaClass(type(commands.Cog), type(ABC)):
 class AdventureHelper(
     AdventureHelperListeners,
     AdventureStats,
+    AdventureClassRoles,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
     """Provide strategic guidance for adventure encounters based on enemy attributes"""
 
-    __version__ = "1.2.0"
+    __version__ = "1.3.0"
     __author__ = ["hatch"]
 
     def __init__(self, bot):
@@ -41,6 +43,7 @@ class AdventureHelper(
         self.config = Config.get_conf(self, 154497072148643841, force_registration=True)
         self.config.register_guild(
             enabled=True,
+            class_roles={},
         )
         # Initialize parent class to load attribs
         super().__init__()
