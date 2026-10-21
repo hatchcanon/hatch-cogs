@@ -320,7 +320,11 @@ class BackPackCommands(AdventureMixin):
                 ctx.command.reset_cooldown(ctx)
                 return
 
-            pieces = await character.get_set_count(return_items=True, set_name=set_name.title())
+            set_name = next(
+                (name for name in self.SET_BONUSES if name.lower() == set_name.strip().lower()),
+                set_name,
+            )
+            pieces = await character.get_set_count(return_items=True, set_name=set_name)
             if not pieces:
                 ctx.command.reset_cooldown(ctx)
                 return await smart_embed(
