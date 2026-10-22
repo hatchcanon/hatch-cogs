@@ -9,6 +9,7 @@ from redbot.core.i18n import Translator, cog_i18n
 from .classroles import AdventureClassRoles
 from .listeners import AdventureHelperListeners
 from .stats import AdventureStats
+from .views import text_view
 
 _ = Translator("AdventureHelper", __file__)
 
@@ -86,9 +87,9 @@ class AdventureHelper(
         await self.config.guild(ctx.guild).enabled.set(not current)
 
         if not current:
-            await ctx.send(_("AdventureHelper is now **enabled** for this server."))
+            await ctx.send(view=text_view(_("AdventureHelper is now **enabled** for this server.")))
         else:
-            await ctx.send(_("AdventureHelper is now **disabled** for this server."))
+            await ctx.send(view=text_view(_("AdventureHelper is now **disabled** for this server.")))
 
     @adventurehelper.command(name="status")
     async def helper_status(self, ctx: commands.Context) -> None:
@@ -97,9 +98,9 @@ class AdventureHelper(
         """
         enabled = await self.config.guild(ctx.guild).enabled()
         status = _("enabled") if enabled else _("disabled")
-        await ctx.send(
+        await ctx.send(view=text_view(
             _("AdventureHelper is currently **{status}** for this server.").format(status=status)
-        )
+        ))
 
     @adventurehelper.command(name="test")
     async def test_helper(self, ctx: commands.Context, *, attribute: str) -> None:
@@ -128,7 +129,7 @@ class AdventureHelper(
         import sys
         adv_cog = self.bot.get_cog("Adventure")
         if not adv_cog:
-            return await ctx.send("Adventure cog not found.")
+            return await ctx.send(view=text_view("Adventure cog not found."))
 
         adv_pkg = type(adv_cog).__module__.rsplit(".", 1)[0]
         Rarities = sys.modules[adv_pkg + ".constants"].Rarities
@@ -161,9 +162,9 @@ class AdventureHelper(
 
         if looted:
             summary = ", ".join(f"{count} {rarity}" for rarity, count in looted.items())
-            await ctx.send(f"Looted: {summary}")
+            await ctx.send(view=text_view(f"Looted: {summary}"))
         else:
-            await ctx.send("No chests to loot.")
+            await ctx.send(view=text_view("No chests to loot."))
 
     @commands.command(name="lsns")
     @commands.guild_only()
@@ -172,7 +173,7 @@ class AdventureHelper(
         import sys
         adv_cog = self.bot.get_cog("Adventure")
         if not adv_cog:
-            return await ctx.send("Adventure cog not found.")
+            return await ctx.send(view=text_view("Adventure cog not found."))
 
         adv_pkg = type(adv_cog).__module__.rsplit(".", 1)[0]
         Rarities = sys.modules[adv_pkg + ".constants"].Rarities
@@ -205,9 +206,9 @@ class AdventureHelper(
 
         if looted:
             summary = ", ".join(f"{count} {rarity}" for rarity, count in looted.items())
-            await ctx.send(f"Looted: {summary}")
+            await ctx.send(view=text_view(f"Looted: {summary}"))
         else:
-            await ctx.send("No chests to loot.")
+            await ctx.send(view=text_view("No chests to loot."))
 
         msg = copy(ctx.message)
         msg.content = f"{ctx.prefix}cbackpack sell --no-match Set"

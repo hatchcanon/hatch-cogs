@@ -12,6 +12,7 @@ from redbot.core.i18n import Translator
 from . import charts
 from .abc import MixinMeta
 from .statsdb import StatsDB
+from .views import image_view, text_view
 
 log = logging.getLogger("red.adventurehelper.stats")
 
@@ -177,9 +178,9 @@ class AdventureStats(MixinMeta):
             data = await self.stats_db.gold_series([member.id], since or 0)
             points = data.get(member.id)
             if not points:
-                return await ctx.send(_("No gold history recorded for {name} yet.").format(name=member.display_name))
+                return await ctx.send(view=text_view(_("No gold history recorded for {name} yet.").format(name=member.display_name)))
             file = await self._render(charts.gold_chart, member.display_name, period.label, points, since, now)
-        await ctx.send(file=file)
+        await ctx.send(view=image_view(file), file=file)
 
     @advstats.command(name="level")
     @commands.bot_has_permissions(attach_files=True)
@@ -198,9 +199,9 @@ class AdventureStats(MixinMeta):
             data = await self.stats_db.level_series([member.id], since or 0)
             points = data.get(member.id)
             if not points:
-                return await ctx.send(_("No level history recorded for {name} yet.").format(name=member.display_name))
+                return await ctx.send(view=text_view(_("No level history recorded for {name} yet.").format(name=member.display_name)))
             file = await self._render(charts.level_chart, member.display_name, period.label, points, since, now)
-        await ctx.send(file=file)
+        await ctx.send(view=image_view(file), file=file)
 
     @advstats.command(name="rebirth", aliases=["rebirths"])
     @commands.bot_has_permissions(attach_files=True)
@@ -219,11 +220,11 @@ class AdventureStats(MixinMeta):
             data = await self.stats_db.level_series([member.id], since or 0)
             points = data.get(member.id)
             if not points:
-                return await ctx.send(
+                return await ctx.send(view=text_view(
                     _("No rebirth history recorded for {name} yet.").format(name=member.display_name)
-                )
+                ))
             file = await self._render(charts.rebirth_chart, member.display_name, period.label, points, since, now)
-        await ctx.send(file=file)
+        await ctx.send(view=image_view(file), file=file)
 
     @advstats.group(name="compare")
     async def advstats_compare(self, ctx: commands.Context) -> None:
@@ -233,7 +234,7 @@ class AdventureStats(MixinMeta):
     async def _compare(self, ctx: commands.Context, metric: str, members, period: Period) -> None:
         members = list(dict.fromkeys(members))  # drop duplicates, keep order
         if len(members) > charts.MAX_SERIES:
-            return await ctx.send(_("You can compare at most {n} players.").format(n=charts.MAX_SERIES))
+            return await ctx.send(view=text_view(_("You can compare at most {n} players.").format(n=charts.MAX_SERIES)))
         now = time.time()
         since = period.since(now)
         async with ctx.typing():
@@ -247,9 +248,9 @@ class AdventureStats(MixinMeta):
                 data = {uid: [(row[0], row[col]) for row in rows] for uid, rows in raw.items()}
             series = [(m.display_name, data[m.id]) for m in members if m.id in data]
             if len(series) < 2:
-                return await ctx.send(_("Not enough recorded history to compare yet."))
+                return await ctx.send(view=text_view(_("Not enough recorded history to compare yet.")))
             file = await self._render(charts.compare_chart, metric.title(), period.label, series, since, now)
-        await ctx.send(file=file)
+        await ctx.send(view=image_view(file), file=file)
 
     @advstats_compare.command(name="gold")
     @commands.bot_has_permissions(attach_files=True)

@@ -7,6 +7,7 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from .abc import MixinMeta
+from .views import container_view, text_view
 
 log = logging.getLogger("red.adventurehelper")
 
@@ -85,53 +86,53 @@ class AdventureClassRoles(MixinMeta):
         """
         hero_classes = self._hero_classes()
         if hero_classes is None:
-            return await ctx.send(_("Adventure cog not found."))
+            return await ctx.send(view=text_view(_("Adventure cog not found.")))
         clz = self._find_class(hero_classes, class_name)
         if clz is None:
             names = ", ".join(c.value for c in hero_classes)
-            return await ctx.send(_("Unknown class. Valid classes are: {names}").format(names=names))
+            return await ctx.send(view=text_view(_("Unknown class. Valid classes are: {names}").format(names=names)))
         if role.is_default() or role.managed:
-            return await ctx.send(_("That role can't be assigned to members."))
+            return await ctx.send(view=text_view(_("That role can't be assigned to members.")))
         if role >= ctx.guild.me.top_role:
-            return await ctx.send(
+            return await ctx.send(view=text_view(
                 _("**{role}** is above my highest role, so I can't assign it. Move it below my role first.").format(
                     role=role.name
                 )
-            )
+            ))
         async with self.config.guild(ctx.guild).class_roles() as class_roles:
             class_roles[clz.value] = role.id
         msg = _("Members who become a **{clz}** will now get **{role}**.").format(clz=clz.class_name, role=role.name)
         if not ctx.guild.me.guild_permissions.manage_roles:
             msg += "\n" + _("Warning: I don't have the Manage Roles permission, so I can't assign it yet.")
-        await ctx.send(msg)
+        await ctx.send(view=text_view(msg))
 
     @classrole.command(name="clear")
     async def classrole_clear(self, ctx: commands.Context, class_name: str) -> None:
         """Stop giving a role for a class"""
         hero_classes = self._hero_classes()
         if hero_classes is None:
-            return await ctx.send(_("Adventure cog not found."))
+            return await ctx.send(view=text_view(_("Adventure cog not found.")))
         clz = self._find_class(hero_classes, class_name)
         if clz is None:
-            return await ctx.send(_("Unknown class."))
+            return await ctx.send(view=text_view(_("Unknown class.")))
         async with self.config.guild(ctx.guild).class_roles() as class_roles:
             removed = class_roles.pop(clz.value, None)
         if removed is None:
-            return await ctx.send(_("No role is set for **{clz}**.").format(clz=clz.class_name))
-        await ctx.send(_("**{clz}** no longer has a role.").format(clz=clz.class_name))
+            return await ctx.send(view=text_view(_("No role is set for **{clz}**.").format(clz=clz.class_name)))
+        await ctx.send(view=text_view(_("**{clz}** no longer has a role.").format(clz=clz.class_name)))
 
     @classrole.command(name="list")
     async def classrole_list(self, ctx: commands.Context) -> None:
         """Show which role is linked to each class"""
         hero_classes = self._hero_classes()
         if hero_classes is None:
-            return await ctx.send(_("Adventure cog not found."))
+            return await ctx.send(view=text_view(_("Adventure cog not found.")))
         class_roles = await self.config.guild(ctx.guild).class_roles()
         lines = []
         for clz in hero_classes:
             role = ctx.guild.get_role(class_roles.get(clz.value, 0))
             lines.append(f"**{clz.class_name}**: {role.name if role else _('not set')}")
-        await ctx.send("\n".join(lines))
+        await ctx.send(view=container_view("\n".join(lines), title=_("Class roles")))
 
     @classrole.command(name="setup")
     @commands.bot_has_permissions(manage_roles=True)
@@ -142,7 +143,7 @@ class AdventureClassRoles(MixinMeta):
         """
         hero_classes = self._hero_classes()
         if hero_classes is None:
-            return await ctx.send(_("Adventure cog not found."))
+            return await ctx.send(view=text_view(_("Adventure cog not found.")))
         colours = {
             "wizard": discord.Colour.blue(),
             "tinkerer": discord.Colour.magenta(),
@@ -171,16 +172,16 @@ class AdventureClassRoles(MixinMeta):
                 class_roles[clz.value] = role.id
                 created.append(role.name)
         if failed:
-            await ctx.send(_("I couldn't create every role. Check my permissions and the server's role limit."))
+            await ctx.send(view=text_view(_("I couldn't create every role. Check my permissions and the server's role limit.")))
         if not created:
             if not failed:
-                await ctx.send(_("Every class already has a role."))
+                await ctx.send(view=text_view(_("Every class already has a role.")))
             return
-        await ctx.send(
+        await ctx.send(view=text_view(
             _("Created and linked: {roles}\nRun `{prefix}classrole sync` to give existing players their roles.").format(
                 roles=", ".join(created), prefix=ctx.clean_prefix
             )
-        )
+        ))
 
     @classrole.command(name="sync")
     @commands.bot_has_permissions(manage_roles=True)
@@ -192,12 +193,12 @@ class AdventureClassRoles(MixinMeta):
         adv_cog = self.bot.get_cog("Adventure")
         hero_classes = self._hero_classes()
         if adv_cog is None or hero_classes is None:
-            return await ctx.send(_("Adventure cog not found."))
+            return await ctx.send(view=text_view(_("Adventure cog not found.")))
         class_roles = await self.config.guild(ctx.guild).class_roles()
         if not class_roles:
-            return await ctx.send(_("No class roles are set up. Use `{prefix}classrole set` first.").format(
+            return await ctx.send(view=text_view(_("No class roles are set up. Use `{prefix}classrole set` first.").format(
                 prefix=ctx.clean_prefix
-            ))
+            )))
 
         updated = failed = 0
         async with ctx.typing():
@@ -217,4 +218,4 @@ class AdventureClassRoles(MixinMeta):
         msg = _("Class roles synced. Updated {updated} members.").format(updated=updated)
         if failed:
             msg += " " + _("Failed for {failed} members (check my role position).").format(failed=failed)
-        await ctx.send(msg)
+        await ctx.send(view=text_view(msg))

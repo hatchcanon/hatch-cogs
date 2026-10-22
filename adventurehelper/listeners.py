@@ -9,6 +9,7 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from .abc import MixinMeta
+from .views import container_view, text_view
 
 log = logging.getLogger("red.adventurehelper")
 
@@ -165,20 +166,12 @@ class AdventureHelperListeners(MixinMeta):
             if participants != last_participants:
                 last_participants = participants
 
-                embed = discord.Embed(
-                    description=analysis["recommendation"],
-                    color=color,
-                )
-
+                sections = [analysis["recommendation"]]
                 if participants:
-                    embed.add_field(
-                        name=_("Participants"),
-                        value=participants,
-                        inline=False
-                    )
+                    sections.append(f"**{_('Participants')}**\n{participants}")
 
                 try:
-                    await message.edit(embed=embed)
+                    await message.edit(view=container_view(*sections, colour=color))
                 except discord.HTTPException:
                     # Message was deleted or we lost permissions
                     break
@@ -217,13 +210,8 @@ class AdventureHelperListeners(MixinMeta):
         else:
             color = discord.Color.blue()
 
-        embed = discord.Embed(
-            description=analysis["recommendation"],
-            color=color,
-        )
-
-        # Send the embed
-        message = await ctx.channel.send(embed=embed)
+        # Send the guidance
+        message = await ctx.channel.send(view=container_view(analysis["recommendation"], colour=color))
 
         # Start background task to update with participant info
         self.bot.loop.create_task(self._update_embed_task(session, message, analysis))
@@ -252,9 +240,9 @@ class AdventureHelperListeners(MixinMeta):
 
                 await adv_cog.config.user(user).set(await c.to_json(fake_ctx, adv_cog.config))
 
-            await channel.send(
+            await channel.send(view=text_view(
                 f"{user.mention} Your positive foraging outcome has reset your adventure skill cooldown!"
-            )
+            ))
         except Exception as e:
             log.error(f"Error resetting cooldown for {user}: {e}")
 
