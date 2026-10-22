@@ -12,6 +12,13 @@ import random
 log = logging.getLogger("red.utility")
 
 
+def text_view(content: str) -> discord.ui.LayoutView:
+    """A components v2 message holding plain text."""
+    view = discord.ui.LayoutView(timeout=None)
+    view.add_item(discord.ui.TextDisplay(content))
+    return view
+
+
 class Utility(commands.Cog):
     """
     Utility commands including Womp's foraging adventure
@@ -165,7 +172,7 @@ Stat Change: -2 Charisma"""
                 if response.status_code == 503 and attempt < max_retries - 1:
                     log.warning(f"Gemini API returned 503, retrying in 5 seconds...")
                     if interaction:
-                        await interaction.followup.send("Retrying...")
+                        await interaction.followup.send(view=text_view("Retrying..."))
                     await asyncio.sleep(5)
                     continue
 
@@ -267,7 +274,7 @@ Stat Change: -2 Charisma"""
                 if response.status_code == 503 and attempt < max_retries - 1:
                     log.warning(f"OpenRouter API returned 503, retrying in 5 seconds...")
                     if interaction:
-                        await interaction.followup.send("Retrying...")
+                        await interaction.followup.send(view=text_view("Retrying..."))
                     await asyncio.sleep(5)
                     continue
 
@@ -305,7 +312,7 @@ Stat Change: -2 Charisma"""
     async def womp_group(self, ctx: commands.Context):
         """Womp commands"""
         if ctx.invoked_subcommand is None:
-            await ctx.send(random.choice(["rigged", "ez"]))
+            await ctx.send(view=text_view(random.choice(["rigged", "ez"])))
 
     @womp_group.command(name="forage")
     async def womp_forage(self, ctx: commands.Context):
@@ -314,48 +321,48 @@ Stat Change: -2 Charisma"""
 
         # Check if it's an error message
         if isinstance(result, str):
-            await ctx.send(result)
+            await ctx.send(view=text_view(result))
             return
 
         phrase, adjective, noun, verb = result
-        view = WompActionView(self, adjective, noun, verb, ctx.author.id)
-        await ctx.send(phrase, view=view)
+        view = WompActionView(self, phrase, adjective, noun, verb, ctx.author.id)
+        await ctx.send(view=view)
 
     @womp_group.command(name="wordsapi")
     @commands.is_owner()
     async def womp_api(self, ctx: commands.Context, api_key: str):
         """Set the Words API key for womp foraging"""
         await self.config.api_key.set(api_key)
-        await ctx.send("API key has been set successfully!")
+        await ctx.send(view=text_view("API key has been set successfully!"))
         # Delete the message to protect the API key
         try:
             await ctx.message.delete()
         except discord.Forbidden:
-            await ctx.send("Warning: Could not delete your message. Please manually delete it to protect your API key.")
+            await ctx.send(view=text_view("Warning: Could not delete your message. Please manually delete it to protect your API key."))
 
     @womp_group.command(name="geminiapi")
     @commands.is_owner()
     async def womp_gemini_api(self, ctx: commands.Context, api_key: str):
         """Set the Gemini API key for D&D-style responses"""
         await self.config.gemini_api_key.set(api_key)
-        await ctx.send("Gemini API key has been set successfully!")
+        await ctx.send(view=text_view("Gemini API key has been set successfully!"))
         # Delete the message to protect the API key
         try:
             await ctx.message.delete()
         except discord.Forbidden:
-            await ctx.send("Warning: Could not delete your message. Please manually delete it to protect your API key.")
+            await ctx.send(view=text_view("Warning: Could not delete your message. Please manually delete it to protect your API key."))
 
     @womp_group.command(name="openrouterapi")
     @commands.is_owner()
     async def womp_openrouter_api(self, ctx: commands.Context, api_key: str):
         """Set the OpenRouter API key for D&D-style responses"""
         await self.config.openrouter_api_key.set(api_key)
-        await ctx.send("OpenRouter API key has been set successfully!")
+        await ctx.send(view=text_view("OpenRouter API key has been set successfully!"))
         # Delete the message to protect the API key
         try:
             await ctx.message.delete()
         except discord.Forbidden:
-            await ctx.send("Warning: Could not delete your message. Please manually delete it to protect your API key.")
+            await ctx.send(view=text_view("Warning: Could not delete your message. Please manually delete it to protect your API key."))
 
     @womp_group.command(name="provider")
     @commands.is_owner()
@@ -364,25 +371,25 @@ Stat Change: -2 Charisma"""
         if provider is None:
             use_openrouter = await self.config.use_openrouter()
             current = "openrouter" if use_openrouter else "gemini"
-            await ctx.send(f"Current AI provider: **{current}**\nUse `[p]womp provider gemini` or `[p]womp provider openrouter` to switch.")
+            await ctx.send(view=text_view(f"Current AI provider: **{current}**\nUse `[p]womp provider gemini` or `[p]womp provider openrouter` to switch."))
             return
 
         provider = provider.lower()
         if provider == "openrouter":
             await self.config.use_openrouter.set(True)
-            await ctx.send("AI provider set to **OpenRouter** (moonshotai/kimi-k2.5).")
+            await ctx.send(view=text_view("AI provider set to **OpenRouter** (moonshotai/kimi-k2.5)."))
         elif provider == "gemini":
             await self.config.use_openrouter.set(False)
-            await ctx.send("AI provider set to **Gemini**.")
+            await ctx.send(view=text_view("AI provider set to **Gemini**."))
         else:
-            await ctx.send("Invalid provider. Use `gemini` or `openrouter`.")
+            await ctx.send(view=text_view("Invalid provider. Use `gemini` or `openrouter`."))
 
     @app_commands.command(name="setmodel", description="Set the OpenRouter model (owner only)")
     @app_commands.guild_only()
     async def set_model_slash(self, interaction: discord.Interaction):
         """Open a modal to change the OpenRouter model."""
         if not await self.bot.is_owner(interaction.user):
-            await interaction.response.send_message("Only the bot owner can use this.", ephemeral=True)
+            await interaction.response.send_message(view=text_view("Only the bot owner can use this."), ephemeral=True)
             return
         current_model = await self.config.openrouter_model()
         await interaction.response.send_modal(SetModelModal(self, current_model))
@@ -395,12 +402,12 @@ Stat Change: -2 Charisma"""
 
         # Check if it's an error message
         if isinstance(result, str):
-            await interaction.response.send_message(result)
+            await interaction.response.send_message(view=text_view(result))
             return
 
         phrase, adjective, noun, verb = result
-        view = WompActionView(self, adjective, noun, verb, interaction.user.id)
-        await interaction.response.send_message(phrase, view=view)
+        view = WompActionView(self, phrase, adjective, noun, verb, interaction.user.id)
+        await interaction.response.send_message(view=view)
 
     @commands.command(name="wpc")
     async def wpc(self, ctx: commands.Context) -> None:
@@ -426,13 +433,24 @@ class SetModelModal(discord.ui.Modal, title="Set OpenRouter Model"):
     async def on_submit(self, interaction: discord.Interaction):
         new_model = self.model_input.value.strip()
         await self.cog.config.openrouter_model.set(new_model)
-        await interaction.response.send_message(f"Model set to `{new_model}`", ephemeral=True)
+        await interaction.response.send_message(view=text_view(f"Model set to `{new_model}`"), ephemeral=True)
 
 
-class WompActionView(discord.ui.View):
-    """View with buttons for womp actions"""
+class WompActionButton(discord.ui.Button["WompActionView"]):
+    """A button that picks one of the womp actions"""
 
-    def __init__(self, cog, adjective: str, noun: str, verb: str, user_id: int):
+    def __init__(self, action: str, label: str, style: discord.ButtonStyle):
+        super().__init__(label=label, style=style)
+        self.action = action
+
+    async def callback(self, interaction: discord.Interaction):
+        await self.view.choose(interaction, self.action)
+
+
+class WompActionView(discord.ui.LayoutView):
+    """Forage message with buttons for womp actions"""
+
+    def __init__(self, cog, phrase: str, adjective: str, noun: str, verb: str, user_id: int):
         super().__init__(timeout=60.0)
         self.cog = cog
         self.adjective = adjective
@@ -440,8 +458,17 @@ class WompActionView(discord.ui.View):
         self.verb = verb
         self.user_id = user_id
 
-        # Update the first button label with the random verb
-        self.children[0].label = f"{verb.capitalize()} it"
+        self.buttons = [
+            WompActionButton("verb", f"{verb.capitalize()} it", discord.ButtonStyle.primary),
+            WompActionButton("sell", "Sell it", discord.ButtonStyle.success),
+            WompActionButton("equip", "Equip it", discord.ButtonStyle.danger),
+        ]
+        self.add_item(
+            discord.ui.Container(
+                discord.ui.TextDisplay(phrase),
+                discord.ui.ActionRow(*self.buttons),
+            )
+        )
 
     def _check_positive_outcome(self, response: str) -> bool:
         """Check if the AI response contains a positive stat change."""
@@ -450,44 +477,27 @@ class WompActionView(discord.ui.View):
 
     async def _handle_response(self, interaction: discord.Interaction, response: str):
         """Send the AI response and dispatch event if positive outcome."""
-        await interaction.followup.send(response)
+        await interaction.followup.send(view=text_view(response))
         if self._check_positive_outcome(response):
             self.cog.bot.dispatch("womp_positive_outcome", interaction.user, interaction.channel)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         """Only allow the original user to interact with the buttons"""
         if interaction.user.id != self.user_id:
-            await interaction.response.send_message("This isn't your forage!", ephemeral=True)
+            await interaction.response.send_message(view=text_view("This isn't your forage!"), ephemeral=True)
             return False
         return True
 
     async def disable_all_buttons(self, interaction: discord.Interaction):
         """Disable all buttons and update the message"""
-        for child in self.children:
-            child.disabled = True
+        for button in self.buttons:
+            button.disabled = True
         await interaction.message.edit(view=self)
 
-    @discord.ui.button(label="Verb it", style=discord.ButtonStyle.primary)
-    async def verb_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def choose(self, interaction: discord.Interaction, action: str):
         await self.disable_all_buttons(interaction)
         await interaction.response.defer()
-        response = await self.cog.get_ai_response("verb", self.adjective, self.noun, self.verb, interaction)
-        await self._handle_response(interaction, response)
-        self.stop()
-
-    @discord.ui.button(label="Sell it", style=discord.ButtonStyle.success)
-    async def sell_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_buttons(interaction)
-        await interaction.response.defer()
-        response = await self.cog.get_ai_response("sell", self.adjective, self.noun, self.verb, interaction)
-        await self._handle_response(interaction, response)
-        self.stop()
-
-    @discord.ui.button(label="Equip it", style=discord.ButtonStyle.danger)
-    async def equip_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.disable_all_buttons(interaction)
-        await interaction.response.defer()
-        response = await self.cog.get_ai_response("equip", self.adjective, self.noun, self.verb, interaction)
+        response = await self.cog.get_ai_response(action, self.adjective, self.noun, self.verb, interaction)
         await self._handle_response(interaction, response)
         self.stop()
 
