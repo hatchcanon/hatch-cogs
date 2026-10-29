@@ -26,6 +26,7 @@ _ = Translator("Adventure", __file__)
 log = logging.getLogger("red.cogs.adventure")
 
 FORGE_LIMIT = 3 # max forged items a character may own at once; mirrors the cap in Character.rebirth
+FORGE_STAT_MODIFIER_CAP = 0.5  # max bonus the character's stats can add to the forge modifier
 
 
 class ClassAbilities(AdventureMixin):
@@ -1114,7 +1115,9 @@ class ClassAbilities(AdventureMixin):
         modifier_bonus_int = 0.01 * (base_int // 20)
         modifier_penalty_str = 0.01 * (base_att // 20)
         modifier_penalty_cha = 0.01 * (base_cha // 20)
-        modifier = sum([modifier_bonus_int, modifier_bonus_luck, modifier_penalty_cha, modifier_penalty_str, modifier])
+        # cap the stat-based part so equipped devices can't snowball the next forge
+        stat_modifier = sum([modifier_bonus_int, modifier_bonus_luck, modifier_penalty_cha, modifier_penalty_str])
+        modifier += min(stat_modifier, FORGE_STAT_MODIFIER_CAP)
         modifier = max(0.001, modifier)
 
         base_int = int(item1.int) + int(item2.int)
