@@ -655,6 +655,7 @@ ORDER = [
 ]
 TINKER_OPEN = r"{.:'"
 TINKER_CLOSE = r"':.}"
+UNFORGEABLE_SETS = {"Air Force One"}  # gear sets tinkerers can't use as forge material
 LEGENDARY_OPEN = r"{Legendary:'"
 ASC_OPEN = r"{Ascended:'"
 LEGENDARY_CLOSE = r"'}"

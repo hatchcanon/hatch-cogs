@@ -74,13 +74,11 @@
     "Necklace Of The Dreadnaught": {"slot": ["neck"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
     "Ring Of The Dreadnaught": {"slot": ["ring"], "set": "Dreadnaughts Battlegear", "parts": 9, "att": 15, "cha": 0, "int": 23, "dex": 0, "luck": 0, "rarity": "set"},
 
-    "Air Force One Boarding Ramp": {"slot": ["boots"], "set": "Air Force One", "parts": 9, "att": 5, "cha": 10, "dex": 8, "rarity": "set"},
-    "Air Force One Cockpit Headset": {"slot": ["head"], "set": "Air Force One", "parts": 9, "att": 8, "cha": 8, "int": 8, "rarity": "set"},
-    "Air Force One Flight Jacket": {"slot": ["chest"], "set": "Air Force One", "parts": 9, "att": 10, "cha": 15, "dex": 5, "rarity": "set"},
-    "Air Force One Presidential Seal Ring": {"slot": ["ring"], "set": "Air Force One", "parts": 9, "cha": 20, "luck": 10, "rarity": "set"},
-    "Air Force One Secure Comms Charm": {"slot": ["charm"], "set": "Air Force One", "parts": 9, "int": 15, "luck": 5, "rarity": "set"},
-    "Air Force One Flag Pin Belt": {"slot": ["belt"], "set": "Air Force One", "parts": 9, "cha": 12, "int": 5, "rarity": "set"},
-    "Air Force One Flight Gloves": {"slot": ["gloves"], "set": "Air Force One", "parts": 9, "att": 5, "dex": 10, "rarity": "set"},
-    "Air Force One Flight Suit Leggings": {"slot": ["legs"], "set": "Air Force One", "parts": 9, "att": 8, "dex": 8, "rarity": "set"},
-    "Air Force One Communications Necklace": {"slot": ["neck"], "set": "Air Force One", "parts": 9, "cha": 10, "int": 10, "rarity": "set"}
+    "Air Force One Boarding Ramp": {"slot": ["boots"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Cockpit Headset": {"slot": ["head"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Flight Jacket": {"slot": ["chest"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Flag Pin Belt": {"slot": ["belt"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Flight Gloves": {"slot": ["gloves"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Flight Suit Leggings": {"slot": ["legs"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"},
+    "Air Force One Communications Necklace": {"slot": ["neck"], "set": "Air Force One", "parts": 7, "att": 60, "cha": 60, "int": 5, "dex": 10, "luck": 5, "rarity": "set"}
 }

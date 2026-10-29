@@ -29,3 +29,9 @@ below, so re-adding it means changing all of them:
 | `charsheet.py` | forging branch of the backpack builder | Skips blocked rarities so they don't appear in the forge menu |
 
 Forged items are still blocked in all of these.
+
+## Unforgeable sets
+
+Individual gear sets can be blocked from forging by adding their set name to `UNFORGEABLE_SETS`
+in `constants.py` (currently `"Air Force One"` from the usa2026 theme). The `forge` and
+`get_forge_items` forgeable lists and the `charsheet.py` backpack builder all check it.

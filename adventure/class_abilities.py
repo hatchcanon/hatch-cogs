@@ -16,7 +16,7 @@ from redbot.core.utils.predicates import MessagePredicate
 from .abc import AdventureMixin
 from .bank import bank
 from .charsheet import Character, Item
-from .constants import HeroClasses, Rarities, Slot
+from .constants import UNFORGEABLE_SETS, HeroClasses, Rarities, Slot
 from .converters import HeroClassConverter, ItemConverter
 from .helpers import ConfirmView, ForgeReplaceView, escape, is_dev, smart_embed
 from .menus import BackpackMenu, BackpackSource
@@ -908,7 +908,11 @@ class ClassAbilities(AdventureMixin):
                     ignored_rarities.add(Rarities.ascended)
                     ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
                 consumed = []
-                forgeables_items = [str(i) for n, i in c.backpack.items() if i.rarity not in ignored_rarities]
+                forgeables_items = [
+                    str(i)
+                    for n, i in c.backpack.items()
+                    if i.rarity not in ignored_rarities and i.set not in UNFORGEABLE_SETS
+                ]
                 if len(forgeables_items) <= 1:
                     return await smart_embed(
                         ctx,
@@ -1050,7 +1054,11 @@ class ClassAbilities(AdventureMixin):
             ignored_rarities.append(Rarities.ascended)
             ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
         consumed = []
-        forgeables_items = [str(i) for n, i in c.backpack.items() if i.rarity not in ignored_rarities]
+        forgeables_items = [
+            str(i)
+            for n, i in c.backpack.items()
+            if i.rarity not in ignored_rarities and i.set not in UNFORGEABLE_SETS
+        ]
         await smart_embed(
             ctx,
             _(

@@ -17,7 +17,17 @@ from redbot.core.utils import AsyncIter
 from redbot.core.utils.chat_formatting import box, escape, humanize_list, humanize_number, pagify
 
 from .bank import bank
-from .constants import DEV_LIST, REBIRTH_LVL, REBIRTH_STEP, ANSITextColours, HeroClasses, Rarities, Slot, Treasure
+from .constants import (
+    DEV_LIST,
+    REBIRTH_LVL,
+    REBIRTH_STEP,
+    UNFORGEABLE_SETS,
+    ANSITextColours,
+    HeroClasses,
+    Rarities,
+    Slot,
+    Treasure,
+)
 
 log = logging.getLogger("red.cogs.adventure")
 
@@ -966,6 +976,8 @@ class Character:
                 continue
             async for item in AsyncIter(slot_group, steps=100):
                 if forging and (item.rarity in [Rarities.forged] or item in consumed_list):
+                    continue
+                if forging and item.set in UNFORGEABLE_SETS:
                     continue
                 if forging and item.rarity is Rarities.ascended:
                     if self.rebirths < 30:
