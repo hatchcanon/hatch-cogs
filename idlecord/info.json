@@ -1,0 +1,20 @@
+{
+    "name": "IdleCord",
+    "author": ["hatch"],
+    "description": "An idle hero-collector RPG played inside Discord. Collect heroes from four factions, build a five-hero formation with ultimate rules, push the campaign and ascend your roster while idle loot piles up.",
+    "install_msg": "Thanks for installing IdleCord! Players start with `[p]idlecord start`. Admins can pick a brag channel with `[p]idlecord setup #channel`.",
+    "short": "Idle hero-collector RPG built on Components V2",
+    "min_bot_version": "3.5.24",
+    "min_python_version": [3, 10, 0],
+    "type": "COG",
+    "requirements": [],
+    "permissions": ["send_messages"],
+    "tags": [
+        "game",
+        "idle",
+        "rpg",
+        "gacha",
+        "heroes"
+    ],
+    "end_user_data_statement": "This cog stores Discord user IDs along with IdleCord game progress (heroes, resources, teams and settings), and a public post channel ID per server. Data can be deleted on request."
+}
