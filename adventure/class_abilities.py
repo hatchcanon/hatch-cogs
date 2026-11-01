@@ -16,7 +16,7 @@ from redbot.core.utils.predicates import MessagePredicate
 from .abc import AdventureMixin
 from .bank import bank
 from .charsheet import Character, Item
-from .constants import HeroClasses, Rarities, Slot
+from .constants import UNFORGEABLE_SETS, HeroClasses, Rarities, Slot
 from .converters import HeroClassConverter, ItemConverter
 from .helpers import ConfirmView, ForgeReplaceView, escape, is_dev, smart_embed
 from .menus import BackpackMenu, BackpackSource
@@ -26,6 +26,7 @@ _ = Translator("Adventure", __file__)
 log = logging.getLogger("red.cogs.adventure")
 
 FORGE_LIMIT = 3 # max forged items a character may own at once; mirrors the cap in Character.rebirth
+FORGE_STAT_MODIFIER_CAP = 0.5  # max bonus the character's stats can add to the forge modifier
 
 
 class ClassAbilities(AdventureMixin):
@@ -907,7 +908,11 @@ class ClassAbilities(AdventureMixin):
                     ignored_rarities.add(Rarities.ascended)
                     ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
                 consumed = []
-                forgeables_items = [str(i) for n, i in c.backpack.items() if i.rarity not in ignored_rarities]
+                forgeables_items = [
+                    str(i)
+                    for n, i in c.backpack.items()
+                    if i.rarity not in ignored_rarities and i.set not in UNFORGEABLE_SETS
+                ]
                 if len(forgeables_items) <= 1:
                     return await smart_embed(
                         ctx,
@@ -1049,7 +1054,11 @@ class ClassAbilities(AdventureMixin):
             ignored_rarities.append(Rarities.ascended)
             ascended_forge_msg += _("\n\nAscended items will be forgeable after 30 rebirths.")
         consumed = []
-        forgeables_items = [str(i) for n, i in c.backpack.items() if i.rarity not in ignored_rarities]
+        forgeables_items = [
+            str(i)
+            for n, i in c.backpack.items()
+            if i.rarity not in ignored_rarities and i.set not in UNFORGEABLE_SETS
+        ]
         await smart_embed(
             ctx,
             _(
@@ -1114,7 +1123,9 @@ class ClassAbilities(AdventureMixin):
         modifier_bonus_int = 0.01 * (base_int // 20)
         modifier_penalty_str = 0.01 * (base_att // 20)
         modifier_penalty_cha = 0.01 * (base_cha // 20)
-        modifier = sum([modifier_bonus_int, modifier_bonus_luck, modifier_penalty_cha, modifier_penalty_str, modifier])
+        # cap the stat-based part so equipped devices can't snowball the next forge
+        stat_modifier = sum([modifier_bonus_int, modifier_bonus_luck, modifier_penalty_cha, modifier_penalty_str])
+        modifier += min(stat_modifier, FORGE_STAT_MODIFIER_CAP)
         modifier = max(0.001, modifier)
 
         base_int = int(item1.int) + int(item2.int)
