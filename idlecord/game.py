@@ -59,7 +59,7 @@ DEFAULT_PLAYER = {
     "notified_claim": 0.0,
     "last_dm": 0.0,
     "battles": 0,
-    "last_battle": None,
+    "last_battle": {},
 }
 
 
