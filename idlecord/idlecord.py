@@ -8,7 +8,8 @@ from typing import Dict, Literal, Optional
 import discord
 from discord.ext import tasks
 from red_commons.logging import getLogger
-from redbot.core import Config, commands
+from redbot.core import Config, bank, commands
+from redbot.core.errors import BalanceTooHigh
 
 from . import game
 from .data import HEROES, IDLE_CAP_MINUTES
@@ -67,6 +68,7 @@ class IdleCord(commands.Cog):
         self.config = Config.get_conf(self, identifier=0x1D1EC0BD, force_registration=True)
         self.config.register_user(**DEFAULT_PLAYER)
         self.config.register_guild(public_channel=None)
+        self.config.register_global(use_bank=True)
         self.locks: Dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
         self.last_brag: Dict[int, float] = {}
 
@@ -90,8 +92,41 @@ class IdleCord(commands.Cog):
 
     # ---------------------------------------------------------------- state
 
+    async def _bank_account(self, user: discord.abc.User) -> Optional[discord.abc.User]:
+        """The account Gold is drawn from, or None when Gold lives in IdleCord's own storage."""
+        if not await self.config.use_bank():
+            return None
+        if not await bank.is_global() and not isinstance(user, discord.Member):
+            raise GameError("This server's bank is per-server, so IdleCord must be played in a server.")
+        return user
+
+    async def _load_gold(self, p: dict, account: Optional[discord.abc.User]) -> int:
+        if account is not None and p["started"]:
+            p["res"]["gold"] = await bank.get_balance(account)
+        return p["res"].get("gold", 0)
+
+    async def _save_gold(self, account: Optional[discord.abc.User], before: int, after: int):
+        """Apply the net Gold change of an action to the bank."""
+        if account is None or after == before:
+            return
+        if after < before:
+            try:
+                await bank.withdraw_credits(account, before - after)
+            except ValueError:
+                raise GameError("Your bank balance changed while this was running. Please try again.")
+            return
+        try:
+            await bank.deposit_credits(account, after - before)
+        except BalanceTooHigh as e:
+            await bank.set_balance(account, e.max_balance)
+
     async def get_player(self, user: discord.abc.User) -> dict:
-        return await self.config.user(user).all()
+        p = await self.config.user(user).all()
+        # Reading only: in a DM with a per-server bank there's no balance to show,
+        # and player() will refuse any action that changes Gold.
+        with contextlib.suppress(GameError):
+            await self._load_gold(p, await self._bank_account(user))
+        return p
 
     @contextlib.asynccontextmanager
     async def player(self, user: discord.abc.User):
@@ -100,14 +135,23 @@ class IdleCord(commands.Cog):
             p = await self.config.user(user).all()
             if not p["started"]:
                 raise GameError("You haven't started yet. Use `/idlecord start`.")
+            account = await self._bank_account(user)
+            before = await self._load_gold(p, account)
             yield p
+            # Bank first: if the withdrawal fails, the action is not saved either.
+            await self._save_gold(account, before, p["res"].get("gold", 0))
             await self.config.user(user).set(p)
 
     async def create_player(self, user: discord.abc.User, starter: str) -> dict:
         async with self.locks[user.id]:
             if await self.config.user(user).started():
                 raise GameError("You've already started your adventure.")
+            account = await self._bank_account(user)
             p = game.new_player(starter, game.now_ts())
+            if account is not None:
+                # The starting Gold is a one-time deposit into the bank.
+                await self._save_gold(account, 0, p["res"]["gold"])
+                p["res"]["gold"] = await bank.get_balance(account)
             await self.config.user(user).set(p)
             return p
 
@@ -306,6 +350,21 @@ class IdleCord(commands.Cog):
             else "## ✅ IdleCord setup\nPublic brag posts are turned off for this server."
         )
         await ctx.send(view=text_view(text), ephemeral=True)
+
+    @idlecord.command(name="usebank", with_app_command=False)
+    @commands.is_owner()
+    async def ic_usebank(self, ctx: commands.Context, enabled: bool):
+        """Use Red's bank balance as IdleCord Gold (on by default).
+
+        When off, Gold is kept in IdleCord's own storage instead.
+        """
+        await self.config.use_bank.set(enabled)
+        text = (
+            "## ✅ IdleCord Gold\nGold now uses each player's Red bank balance."
+            if enabled
+            else "## ✅ IdleCord Gold\nGold is now stored by IdleCord, separate from the bank."
+        )
+        await ctx.send(view=text_view(text))
 
     @idlecord.command(name="reset", with_app_command=False)
     @commands.is_owner()
