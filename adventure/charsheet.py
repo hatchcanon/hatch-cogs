@@ -19,6 +19,7 @@ from redbot.core.utils.chat_formatting import box, escape, humanize_list, humani
 from .bank import bank
 from .constants import (
     DEV_LIST,
+    FORGED_REWARD_FRACTION,
     REBIRTH_LVL,
     REBIRTH_STEP,
     UNFORGEABLE_SETS,
@@ -533,6 +534,17 @@ class Character:
             int(stats * self.gear_set_bonus.get("statmult", 1)) + self.gear_set_bonus.get(stat, 0),
             stats,
         )
+
+    def get_reward_stat(self, stat: str) -> int:
+        """Raw stat used for xp/currency rewards, with equipped forged items only partly counted."""
+        forged = 0
+        for slot in Slot:
+            if slot is Slot.two_handed:
+                continue
+            item = getattr(self, slot.name)
+            if item and item.rarity is Rarities.forged:
+                forged += int(getattr(item, stat))
+        return int(getattr(self, f"_{stat}") - forged * (1 - FORGED_REWARD_FRACTION))
 
     async def get_set_count(self, return_items: bool = False, set_name: str = None):
         set_names = {}

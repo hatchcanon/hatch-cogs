@@ -30,7 +30,7 @@ from .cart import Trader
 from .character import CharacterCommands
 from .charsheet import Character, Item, calculate_sp, has_funds
 from .class_abilities import ClassAbilities
-from .constants import DEV_LIST, ANSITextColours, HeroClasses, Rarities, Treasure
+from .constants import DEV_LIST, FORGE_MAX_STAT, ANSITextColours, HeroClasses, Rarities, Treasure
 from .converters import ArgParserFailure, ChallengeConverter
 from .defaults import default_global, default_guild, default_user
 from .dev import DevCommands
@@ -51,7 +51,7 @@ _ = Translator("Adventure", __file__)
 log = logging.getLogger("red.cogs.adventure")
 
 
-_SCHEMA_VERSION = 4
+_SCHEMA_VERSION = 5
 _config: Config = None
 
 
@@ -457,6 +457,38 @@ class Adventure(
                                 item_name = item_name.replace("Solomos", "Solomons")
                                 adventurers_data[user]["backpack"][item_name] = item_data
             await self.config.schema_version.set(4)
+            from_version = 4
+
+        if from_version < 5 <= to_version:
+            # shrink devices forged before the forge stat modifier was capped
+            group = self.config._get_base_group(self.config.USER)
+            shrunk = 0
+            async with group.all() as adventurers_data:
+                async for user in AsyncIter(list(adventurers_data), steps=100):
+                    user_data = adventurers_data[user]
+                    item_dicts = list(user_data.get("items", {}).values())
+                    item_dicts.append(user_data.get("backpack", {}))
+                    for loadout in user_data.get("loadouts", {}).values():
+                        item_dicts.extend(loadout.values())
+                    for items in item_dicts:
+                        if not isinstance(items, dict):
+                            continue
+                        for item_data in items.values():
+                            if self._shrink_forged_item(item_data):
+                                shrunk += 1
+            log.info("Shrunk %s forged items to the %s per-stat forge cap", shrunk, FORGE_MAX_STAT)
+            await self.config.schema_version.set(5)
+
+    @staticmethod
+    def _shrink_forged_item(item_data) -> bool:
+        if not isinstance(item_data, dict) or item_data.get("rarity") != "forged":
+            return False
+        changed = False
+        for stat in ("att", "cha", "int", "dex", "luck"):
+            if item_data.get(stat, 0) > FORGE_MAX_STAT:
+                item_data[stat] = FORGE_MAX_STAT
+                changed = True
+        return changed
 
     def _convert_item_migration(self, item_name, item_dict):
         new_name = item_name
@@ -2682,8 +2714,10 @@ class Adventure(
             except Exception as exc:
                 log.exception("Error with the new character sheet", exc_info=exc)
                 continue
-            userxp = int(xp + (xp * 0.5 * c.rebirths) + max((xp * 0.1 * min(250, c._int / 10)), 0))
-            usercp = int(cp + max((cp * 0.1 * min(1000, (c._luck + c._att) / 10)), 0))
+            reward_int = c.get_reward_stat("int")
+            reward_luck_att = c.get_reward_stat("luck") + c.get_reward_stat("att")
+            userxp = int(xp + (xp * 0.5 * c.rebirths) + max((xp * 0.1 * min(250, reward_int / 10)), 0))
+            usercp = int(cp + max((cp * 0.1 * min(1000, reward_luck_att / 10)), 0))
             userxp = int(userxp * (c.gear_set_bonus.get("xpmult", 1) + daymult + session_bonus))
             usercp = int(usercp * (c.gear_set_bonus.get("cpmult", 1) + daymult))
             newxp += userxp

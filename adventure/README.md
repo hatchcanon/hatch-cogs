@@ -35,3 +35,13 @@ Forged items are still blocked in all of these.
 Individual gear sets can be blocked from forging by adding their set name to `UNFORGEABLE_SETS`
 in `constants.py` (currently `"Air Force One"` from the usa2026 theme). The `forge` and
 `get_forge_items` forgeable lists and the `charsheet.py` backpack builder all check it.
+
+## Forge balance
+
+- The forge roll adds 1.00–1.50 to the modifier.
+- `FORGE_STAT_MODIFIER_CAP` (`class_abilities.py`) is a soft cap: the character's stats add
+  `cap * (1 - e^(-bonus / cap))`, so higher stats always help a little but never pass the cap.
+- `FORGE_MAX_STAT` (`constants.py`) is the value the schema 5 migration in `adventure.py` clamped every forged
+  item made before the cap down to (585). It only matters for that one-time migration.
+- `FORGED_REWARD_FRACTION` (`constants.py`) is how much of an equipped device's stats count towards XP and
+  currency rewards (`Character.get_reward_stat`). Devices still count in full for combat.

@@ -2,6 +2,7 @@
 import asyncio
 import contextlib
 import logging
+import math
 import random
 import time
 from typing import List, Literal, Optional
@@ -26,7 +27,7 @@ _ = Translator("Adventure", __file__)
 log = logging.getLogger("red.cogs.adventure")
 
 FORGE_LIMIT = 3 # max forged items a character may own at once; mirrors the cap in Character.rebirth
-FORGE_STAT_MODIFIER_CAP = 0.5  # max bonus the character's stats can add to the forge modifier
+FORGE_STAT_MODIFIER_CAP = 1.0  # bonus the character's stats add to the forge modifier approaches but never reaches this
 
 
 class ClassAbilities(AdventureMixin):
@@ -1114,7 +1115,7 @@ class ClassAbilities(AdventureMixin):
         item2 = consumed[1]
 
         roll = random.randint(1, 20)
-        modifier = (roll / 20) + 0.75
+        modifier = 1.0 + (roll - 1) / 38  # 1.00 - 1.50
         base_cha = max(character._cha, 1)
         base_int = character._int
         base_luck = character._luck
@@ -1123,9 +1124,12 @@ class ClassAbilities(AdventureMixin):
         modifier_bonus_int = 0.01 * (base_int // 20)
         modifier_penalty_str = 0.01 * (base_att // 20)
         modifier_penalty_cha = 0.01 * (base_cha // 20)
-        # cap the stat-based part so equipped devices can't snowball the next forge
+        # diminishing returns so equipped devices can't snowball the next forge,
+        # while higher stats still always give a slightly better modifier
         stat_modifier = sum([modifier_bonus_int, modifier_bonus_luck, modifier_penalty_cha, modifier_penalty_str])
-        modifier += min(stat_modifier, FORGE_STAT_MODIFIER_CAP)
+        if stat_modifier > 0:
+            stat_modifier = FORGE_STAT_MODIFIER_CAP * (1 - math.exp(-stat_modifier / FORGE_STAT_MODIFIER_CAP))
+        modifier += stat_modifier
         modifier = max(0.001, modifier)
 
         base_int = int(item1.int) + int(item2.int)
