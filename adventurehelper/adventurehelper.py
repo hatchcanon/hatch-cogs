@@ -7,6 +7,7 @@ from redbot.core import Config, checks, commands
 from redbot.core.i18n import Translator, cog_i18n
 
 from .classroles import AdventureClassRoles
+from .forgesim import ForgeSimulator
 from .listeners import AdventureHelperListeners
 from .stats import AdventureStats
 from .views import text_view
@@ -31,12 +32,13 @@ class AdventureHelper(
     AdventureHelperListeners,
     AdventureStats,
     AdventureClassRoles,
+    ForgeSimulator,
     commands.Cog,
     metaclass=CompositeMetaClass,
 ):
     """Provide strategic guidance for adventure encounters based on enemy attributes"""
 
-    __version__ = "1.3.0"
+    __version__ = "1.4.0"
     __author__ = ["hatch"]
 
     def __init__(self, bot):
