@@ -356,24 +356,11 @@ class Trader(discord.ui.View):
         return output
 
     def generate_chests(self):
-        # 50% chance the cart brings any chests at all, then 1-2 of them.
-        if random.random() >= 0.5:
-            return
-        for _i in range(random.randint(1, 2)):
-            rarity_roll = random.random()
-            # 90% set
-            if rarity_roll >= 0.1:
-                rarity = Rarities.set
-                price = random.randint(900000, 3000000)
-            # # 30% epic
-            # elif rarity_roll >= 0.6:
-            #     rarity = Rarities.epic
-            #     price = random.randint(3000, 5000)
-            # 60% rare
-            else:
-                rarity = Rarities.ascended
-                price = random.randint(100000, 200000)
+        # Every cart always brings a set chest.
+        chests = [(Rarities.set, random.randint(900000, 3000000))]
+        # Independent 50% chance it also brings an ascended chest.
+        if random.random() < 0.5:
+            chests.append((Rarities.ascended, random.randint(100000, 200000)))
+        for rarity, price in chests:
             chest = ChestStock(rarity)
-            if chest.name in self.items:
-                continue
             self.items[chest.name] = {"itemname": chest.name, "item": chest, "price": price, "lvl": None}
