@@ -26,11 +26,9 @@ _ = Translator("AdventureHelper", __file__)
 
 MY_CHARACTER = "__me__"
 NO_GEAR = "__none__"
-OFF = "off"
 FORGE_COUNTS = (1, 3, 5, 10)
 ROLL_CHOICES = ["avg"] + [str(r) for r in range(1, 21)]
-CAP_CHOICES = (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 5.0)
-MAX_STAT_CHOICES = (300, 400, 450, 500, 520, 550, 585, 600, 630, 700, 800, 1000, 1500, 2000)
+CAP_CHOICES = (1.0, 2.0, 3.0, 5.0, 10, 15, 20, 30)
 FRACTION_CHOICES = (0.0, 0.1, 0.25, 0.5, 0.75, 1.0)
 
 
@@ -64,7 +62,6 @@ class ForgeSimView(discord.ui.LayoutView):
         my_loadout: Optional[Loadout],
         cap: float,
         forge_limit: int,
-        max_stat: Optional[int],
         fraction: float,
     ):
         super().__init__(timeout=600)
@@ -75,12 +72,10 @@ class ForgeSimView(discord.ui.LayoutView):
         self.forge_limit = forge_limit
         self.message: Optional[discord.Message] = None
 
-        # live values from the adventure cog; FORGE_MAX_STAT is only a what-if ceiling, so it starts off
+        # live values from the adventure cog
         self.live_cap = cap
-        self.live_max_stat = max_stat
         self.live_fraction = fraction
         self.cap = cap
-        self.max_stat: Optional[int] = None
         self.fraction = fraction
 
         self.input_set = forgeable_sets[0]
@@ -142,15 +137,11 @@ class ForgeSimView(discord.ui.LayoutView):
         def mark(changed: bool) -> str:
             return _(" *(changed)*") if changed else ""
 
-        max_stat = _("off") if self.max_stat is None else str(self.max_stat)
         return _(
-            "**Stat bonus cap:** {cap:g}{cap_mark} · **Device stat ceiling:** {max_stat}{max_mark} · "
-            "**Device reward share:** {fraction:.0%}{fraction_mark}"
+            "**Stat bonus cap:** {cap:g}{cap_mark} · **Device reward share:** {fraction:.0%}{fraction_mark}"
         ).format(
             cap=self.cap,
             cap_mark=mark(self.cap != self.live_cap),
-            max_stat=max_stat,
-            max_mark=mark(self.max_stat is not None),
             fraction=self.fraction,
             fraction_mark=mark(self.fraction != self.live_fraction),
         )
@@ -170,7 +161,7 @@ class ForgeSimView(discord.ui.LayoutView):
         raw = loadout.raw()
         roll = self._roll_value()
         steps, after = simulate_chain(
-            loadout, item1, item2, roll, self.cap, self.forges, self.forge_limit, self.max_stat
+            loadout, item1, item2, roll, self.cap, self.forges, self.forge_limit
         )
         rewards = self._reward_line(loadout, after)
 
@@ -179,7 +170,7 @@ class ForgeSimView(discord.ui.LayoutView):
             roll_mod = roll_modifier(roll)
             device = steps[0].device
             totals = [
-                sum(forge(item1, item2, raw, r, self.cap, self.max_stat).values()) for r in (1, AVERAGE_ROLL, 20)
+                sum(forge(item1, item2, raw, r, self.cap).values()) for r in (1, AVERAGE_ROLL, 20)
             ]
             table = "\n".join(
                 [
@@ -343,22 +334,6 @@ class ForgeSimView(discord.ui.LayoutView):
             )
             for v in _with_live(CAP_CHOICES, self.live_cap)
         ]
-        max_options = [
-            discord.SelectOption(
-                label=_("Device stat ceiling: off"),
-                value=OFF,
-                description=_("Live behaviour: new forges have no ceiling"),
-                default=self.max_stat is None,
-            )
-        ] + [
-            discord.SelectOption(
-                label=_("Device stat ceiling: {v}").format(v=v),
-                value=str(v),
-                description=_("FORGE_MAX_STAT (migration only)") if v == self.live_max_stat else None,
-                default=v == self.max_stat,
-            )
-            for v in _with_live(MAX_STAT_CHOICES, self.live_max_stat)[:24]
-        ]
         fraction_options = [
             discord.SelectOption(
                 label=_("Device reward share: {v:.0%}").format(v=v),
@@ -370,7 +345,6 @@ class ForgeSimView(discord.ui.LayoutView):
         ]
         return [
             _SimSelect("cap", _("FORGE_STAT_MODIFIER_CAP"), cap_options[:25]),
-            _SimSelect("max_stat", _("FORGE_MAX_STAT"), max_options),
             _SimSelect("fraction", _("FORGED_REWARD_FRACTION"), fraction_options[:25]),
         ]
 
@@ -413,8 +387,6 @@ class ForgeSimView(discord.ui.LayoutView):
             self.build_pieces = int(value)
         elif key in ("cap", "fraction"):
             setattr(self, key, float(value))
-        elif key == "max_stat":
-            self.max_stat = None if value == OFF else int(value)
         else:
             setattr(self, key, value)
         await self._update(interaction)
@@ -428,7 +400,7 @@ class ForgeSimView(discord.ui.LayoutView):
         await self._update(interaction)
 
     async def _reset_tuning(self, interaction: discord.Interaction) -> None:
-        self.cap, self.max_stat, self.fraction = self.live_cap, None, self.live_fraction
+        self.cap, self.fraction = self.live_cap, self.live_fraction
         await self._update(interaction)
 
     async def _close(self, interaction: discord.Interaction) -> None:
@@ -490,7 +462,6 @@ class ForgeSimulator(MixinMeta):
         cap = getattr(class_abilities, "FORGE_STAT_MODIFIER_CAP", 1.0)
         forge_limit = getattr(class_abilities, "FORGE_LIMIT", 3)
         unforgeable = getattr(constants, "UNFORGEABLE_SETS", set())
-        max_stat = getattr(constants, "FORGE_MAX_STAT", None)
         fraction = getattr(constants, "FORGED_REWARD_FRACTION", 1.0)
 
         sets: Dict[str, Dict[str, dict]] = {}
@@ -503,6 +474,6 @@ class ForgeSimulator(MixinMeta):
 
         my_loadout = await self._my_loadout(ctx, adv_cog, adv_pkg)
         view = ForgeSimView(
-            ctx.author, sets, forgeable_sets, my_loadout, cap, forge_limit, max_stat, fraction
+            ctx.author, sets, forgeable_sets, my_loadout, cap, forge_limit, fraction
         )
         view.message = await ctx.send(view=view)

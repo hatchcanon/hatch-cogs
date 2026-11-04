@@ -64,23 +64,13 @@ def stat_modifier(raw: Dict[str, int], cap: float) -> Tuple[float, float]:
     return bonus, bonus
 
 
-def forge(
-    item1: SimItem,
-    item2: SimItem,
-    raw: Dict[str, int],
-    roll: float,
-    cap: float,
-    max_stat: Optional[int] = None,
-) -> Dict[str, int]:
-    """Device stats. `max_stat` is a what-if per-stat ceiling; the live forge has none."""
+def forge(item1: SimItem, item2: SimItem, raw: Dict[str, int], roll: float, cap: float) -> Dict[str, int]:
     _, stat_mod = stat_modifier(raw, cap)
     modifier = max(0.001, roll_modifier(roll) + stat_mod)
     result = {}
     for s in STATS:
         base = int(item1.stats.get(s, 0)) + int(item2.stats.get(s, 0))
         result[s] = int(base * modifier + base)
-        if max_stat is not None:
-            result[s] = min(result[s], max_stat)
     return result
 
 
@@ -115,7 +105,6 @@ def simulate_chain(
     cap: float,
     forges: int,
     forge_limit: int = 3,
-    max_stat: Optional[int] = None,
 ) -> Tuple[List[ForgeStep], Loadout]:
     """Forge repeatedly, equipping each device if it improves the build, like a tinkerer chasing stats.
 
@@ -126,7 +115,7 @@ def simulate_chain(
     for n in range(1, forges + 1):
         raw = loadout.raw()
         _, bonus = stat_modifier(raw, cap)
-        stats = forge(item1, item2, raw, roll, cap, max_stat)
+        stats = forge(item1, item2, raw, roll, cap)
         device = SimItem(f"Device #{n}", stats, forged=True)
         devices = [i for i in loadout.items if i.forged]
         action: Optional[str] = None
