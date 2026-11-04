@@ -656,9 +656,6 @@ ORDER = [
 TINKER_OPEN = r"{.:'"
 TINKER_CLOSE = r"':.}"
 UNFORGEABLE_SETS = {}  # gear sets tinkerers can't use as forge material
-# Per-stat value the schema 5 migration shrank devices forged before the stat modifier was capped down to.
-# Was the best capped forge at the time: two 90-stat set pieces * (1 + 1.75 roll + 0.5 hard cap).
-# Forges can now reach up to two 90-stat pieces * (1 + 1.5 roll + 1.0 soft cap) = 630.
 FORGE_MAX_STAT = 585
 FORGED_REWARD_FRACTION = 0.25  # share of an equipped device's stats that counts towards xp/currency rewards
 LEGENDARY_OPEN = r"{Legendary:'"
