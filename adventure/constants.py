@@ -655,7 +655,7 @@ ORDER = [
 ]
 TINKER_OPEN = r"{.:'"
 TINKER_CLOSE = r"':.}"
-UNFORGEABLE_SETS = {"Air Force One"}  # gear sets tinkerers can't use as forge material
+UNFORGEABLE_SETS = {}  # gear sets tinkerers can't use as forge material
 # Per-stat value the schema 5 migration shrank devices forged before the stat modifier was capped down to.
 # Was the best capped forge at the time: two 90-stat set pieces * (1 + 1.75 roll + 0.5 hard cap).
 # Forges can now reach up to two 90-stat pieces * (1 + 1.5 roll + 1.0 soft cap) = 630.

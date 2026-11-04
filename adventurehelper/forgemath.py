@@ -64,14 +64,39 @@ def stat_modifier(raw: Dict[str, int], cap: float) -> Tuple[float, float]:
     return bonus, bonus
 
 
-def forge(item1: SimItem, item2: SimItem, raw: Dict[str, int], roll: float, cap: float) -> Dict[str, int]:
+def forge(
+    item1: SimItem,
+    item2: SimItem,
+    raw: Dict[str, int],
+    roll: float,
+    cap: float,
+    max_stat: Optional[int] = None,
+) -> Dict[str, int]:
+    """Device stats. `max_stat` is a what-if per-stat ceiling; the live forge has none."""
     _, stat_mod = stat_modifier(raw, cap)
     modifier = max(0.001, roll_modifier(roll) + stat_mod)
     result = {}
     for s in STATS:
         base = int(item1.stats.get(s, 0)) + int(item2.stats.get(s, 0))
         result[s] = int(base * modifier + base)
+        if max_stat is not None:
+            result[s] = min(result[s], max_stat)
     return result
+
+
+def reward_multipliers(loadout: Loadout, fraction: float) -> Tuple[float, float]:
+    """XP and currency stat multipliers from Adventure._reward, with devices counted at `fraction`.
+
+    Leaves out rebirths, set xp/cp multipliers and the daily bonus.
+    """
+    raw = loadout.raw()
+    for item in loadout.items:
+        if item.forged:
+            for s in STATS:
+                raw[s] -= item.stats.get(s, 0) * item.slots * (1 - fraction)
+    xp = 1 + 0.1 * min(250, raw["int"] / 10)
+    cp = 1 + 0.1 * min(1000, (raw["luck"] + raw["att"]) / 10)
+    return max(xp, 1), max(cp, 1)
 
 
 @dataclass
@@ -90,14 +115,18 @@ def simulate_chain(
     cap: float,
     forges: int,
     forge_limit: int = 3,
-) -> List[ForgeStep]:
-    """Forge repeatedly, equipping each device if it improves the build, like a tinkerer chasing stats."""
+    max_stat: Optional[int] = None,
+) -> Tuple[List[ForgeStep], Loadout]:
+    """Forge repeatedly, equipping each device if it improves the build, like a tinkerer chasing stats.
+
+    Returns each forge and the loadout after the last one.
+    """
     loadout = loadout.copy()
     steps = []
     for n in range(1, forges + 1):
         raw = loadout.raw()
         _, bonus = stat_modifier(raw, cap)
-        stats = forge(item1, item2, raw, roll, cap)
+        stats = forge(item1, item2, raw, roll, cap, max_stat)
         device = SimItem(f"Device #{n}", stats, forged=True)
         devices = [i for i in loadout.items if i.forged]
         action: Optional[str] = None
@@ -111,4 +140,4 @@ def simulate_chain(
                 loadout.items[loadout.items.index(weakest)] = device
                 action = f"replaced {weakest.name}"
         steps.append(ForgeStep(raw, bonus, stats, action or "weaker than gear, not equipped"))
-    return steps
+    return steps, loadout

@@ -7,7 +7,17 @@ from redbot.core import commands
 from redbot.core.i18n import Translator
 
 from .abc import MixinMeta
-from .forgemath import AVERAGE_ROLL, STATS, Loadout, SimItem, forge, roll_modifier, simulate_chain, stat_modifier
+from .forgemath import (
+    AVERAGE_ROLL,
+    STATS,
+    Loadout,
+    SimItem,
+    forge,
+    reward_multipliers,
+    roll_modifier,
+    simulate_chain,
+    stat_modifier,
+)
 from .views import text_view
 
 log = logging.getLogger("red.adventurehelper.forgesim")
@@ -16,8 +26,12 @@ _ = Translator("AdventureHelper", __file__)
 
 MY_CHARACTER = "__me__"
 NO_GEAR = "__none__"
+OFF = "off"
 FORGE_COUNTS = (1, 3, 5, 10)
 ROLL_CHOICES = ["avg"] + [str(r) for r in range(1, 21)]
+CAP_CHOICES = (0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 5.0)
+MAX_STAT_CHOICES = (300, 400, 450, 500, 520, 550, 585, 600, 630, 700, 800, 1000, 1500, 2000)
+FRACTION_CHOICES = (0.0, 0.1, 0.25, 0.5, 0.75, 1.0)
 
 
 def _is_two_handed(data: dict) -> bool:
@@ -36,6 +50,11 @@ def _row(label: str, stats: Dict[str, int]) -> str:
     return f"{label:<8}" + "".join(f"{stats.get(s, 0):>7}" for s in STATS)
 
 
+def _with_live(choices, live) -> list:
+    """Choices for a tuning select, always including the live value."""
+    return sorted(set(choices) | {live}) if live is not None else list(choices)
+
+
 class ForgeSimView(discord.ui.LayoutView):
     def __init__(
         self,
@@ -45,15 +64,24 @@ class ForgeSimView(discord.ui.LayoutView):
         my_loadout: Optional[Loadout],
         cap: float,
         forge_limit: int,
+        max_stat: Optional[int],
+        fraction: float,
     ):
         super().__init__(timeout=600)
         self.author = author
         self.sets = sets
         self.forgeable_sets = forgeable_sets
         self.my_loadout = my_loadout
-        self.cap = cap
         self.forge_limit = forge_limit
         self.message: Optional[discord.Message] = None
+
+        # live values from the adventure cog; FORGE_MAX_STAT is only a what-if ceiling, so it starts off
+        self.live_cap = cap
+        self.live_max_stat = max_stat
+        self.live_fraction = fraction
+        self.cap = cap
+        self.max_stat: Optional[int] = None
+        self.fraction = fraction
 
         self.input_set = forgeable_sets[0]
         pieces = list(sets[self.input_set])
@@ -63,6 +91,7 @@ class ForgeSimView(discord.ui.LayoutView):
         self.build_pieces = 0
         self.roll = "avg"
         self.forges = 1
+        self.tuning = False
         self.render()
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
@@ -109,18 +138,49 @@ class ForgeSimView(discord.ui.LayoutView):
     def _roll_label(self) -> str:
         return _("average (10.5)") if self.roll == "avg" else self.roll
 
+    def _tuning_label(self) -> str:
+        def mark(changed: bool) -> str:
+            return _(" *(changed)*") if changed else ""
+
+        max_stat = _("off") if self.max_stat is None else str(self.max_stat)
+        return _(
+            "**Stat bonus cap:** {cap:g}{cap_mark} · **Device stat ceiling:** {max_stat}{max_mark} · "
+            "**Device reward share:** {fraction:.0%}{fraction_mark}"
+        ).format(
+            cap=self.cap,
+            cap_mark=mark(self.cap != self.live_cap),
+            max_stat=max_stat,
+            max_mark=mark(self.max_stat is not None),
+            fraction=self.fraction,
+            fraction_mark=mark(self.fraction != self.live_fraction),
+        )
+
+    def _reward_line(self, before: Loadout, after: Loadout) -> str:
+        xp_before, cp_before = reward_multipliers(before, self.fraction)
+        xp_after, cp_after = reward_multipliers(after, self.fraction)
+        return _(
+            "**Rewards** (devices count at {fraction:.0%}): XP ×{xp_b:.1f} → ×{xp_a:.1f} · "
+            "gold ×{cp_b:.1f} → ×{cp_a:.1f}"
+        ).format(fraction=self.fraction, xp_b=xp_before, xp_a=xp_after, cp_b=cp_before, cp_a=cp_after)
+
     def _results(self) -> str:
         item1 = _set_item(self.piece1, self.sets[self.input_set][self.piece1])
         item2 = _set_item(self.piece2, self.sets[self.input_set][self.piece2])
         loadout = self._loadout()
         raw = loadout.raw()
         roll = self._roll_value()
+        steps, after = simulate_chain(
+            loadout, item1, item2, roll, self.cap, self.forges, self.forge_limit, self.max_stat
+        )
+        rewards = self._reward_line(loadout, after)
 
         if self.forges == 1:
             bonus_raw, bonus = stat_modifier(raw, self.cap)
             roll_mod = roll_modifier(roll)
-            device = forge(item1, item2, raw, roll, self.cap)
-            totals = [sum(forge(item1, item2, raw, r, self.cap).values()) for r in (1, AVERAGE_ROLL, 20)]
+            device = steps[0].device
+            totals = [
+                sum(forge(item1, item2, raw, r, self.cap, self.max_stat).values()) for r in (1, AVERAGE_ROLL, 20)
+            ]
             table = "\n".join(
                 [
                     f"{'':<8}" + "".join(f"{s.upper():>7}" for s in STATS),
@@ -131,10 +191,11 @@ class ForgeSimView(discord.ui.LayoutView):
             )
             return _(
                 "**Character raw stats:** {raw}\n"
-                "**Modifier:** roll {roll_mod:.2f} + stats {bonus:.2f} (soft cap of {raw_bonus:.2f}) "
+                "**Modifier:** roll {roll_mod:.2f} + stats {bonus:.2f} ({raw_bonus:.2f} before the soft cap) "
                 "= **{total:.2f}** → inputs × {mult:.2f}\n"
-                "```\n{table}\n```"
-                "Device total stats — roll 1: **{low}** · average: **{avg}** · roll 20: **{high}**"
+                "```\n{table}\n```\n"
+                "Device total stats — roll 1: **{low}** · average: **{avg}** · roll 20: **{high}**\n"
+                "If equipped: {action}\n{rewards}"
             ).format(
                 raw=_stat_line(raw),
                 roll_mod=roll_mod,
@@ -146,9 +207,10 @@ class ForgeSimView(discord.ui.LayoutView):
                 low=totals[0],
                 avg=totals[1],
                 high=totals[2],
+                action=steps[0].action,
+                rewards=rewards,
             )
 
-        steps = simulate_chain(loadout, item1, item2, roll, self.cap, self.forges, self.forge_limit)
         header = f"{'#':<3}{'Raw INT':>8}{'Bonus':>7}" + "".join(f"{s.upper():>6}" for s in STATS)
         lines = [header]
         for n, step in enumerate(steps, 1):
@@ -158,8 +220,10 @@ class ForgeSimView(discord.ui.LayoutView):
         actions = "\n".join(f"**#{n}:** {step.action}" for n, step in enumerate(steps, 1))
         return _(
             "Forging the same two items {count} times. Each device is equipped if it beats your weakest "
-            "gear (max {limit} devices) before the next forge.\n```\n{table}\n```{actions}"
-        ).format(count=self.forges, limit=self.forge_limit, table="\n".join(lines), actions=actions)
+            "gear (max {limit} devices) before the next forge.\n```\n{table}\n```\n{actions}\n{rewards}"
+        ).format(
+            count=self.forges, limit=self.forge_limit, table="\n".join(lines), actions=actions, rewards=rewards
+        )
 
     # ---- rendering ----
 
@@ -172,7 +236,8 @@ class ForgeSimView(discord.ui.LayoutView):
                 _(
                     "**Forging:** {p1} + {p2} ({set})\n"
                     "**Character:** {build}\n"
-                    "**Roll:** {roll} · **Forges:** {forges}"
+                    "**Roll:** {roll} · **Forges:** {forges}\n"
+                    "{tuning}"
                 ).format(
                     p1=self.piece1,
                     p2=self.piece2,
@@ -180,6 +245,7 @@ class ForgeSimView(discord.ui.LayoutView):
                     build=self._build_label(),
                     roll=self._roll_label(),
                     forges=self.forges,
+                    tuning=self._tuning_label(),
                 )
             )
         )
@@ -187,12 +253,12 @@ class ForgeSimView(discord.ui.LayoutView):
         container.add_item(discord.ui.TextDisplay(self._results()))
         if controls:
             container.add_item(discord.ui.Separator())
-            for select in self._selects():
+            for select in self._tuning_selects() if self.tuning else self._setup_selects():
                 container.add_item(discord.ui.ActionRow(select))
             container.add_item(discord.ui.ActionRow(*self._buttons()))
         self.add_item(container)
 
-    def _selects(self) -> List[discord.ui.Select]:
+    def _setup_selects(self) -> List[discord.ui.Select]:
         selects = [
             _SimSelect(
                 "input_set",
@@ -264,16 +330,74 @@ class ForgeSimView(discord.ui.LayoutView):
         )
         return selects
 
+    def _tuning_selects(self) -> List[discord.ui.Select]:
+        def live(is_live: bool) -> Optional[str]:
+            return _("Live value") if is_live else None
+
+        cap_options = [
+            discord.SelectOption(
+                label=_("Stat bonus cap: {v:g}").format(v=v),
+                value=str(v),
+                description=live(v == self.live_cap),
+                default=v == self.cap,
+            )
+            for v in _with_live(CAP_CHOICES, self.live_cap)
+        ]
+        max_options = [
+            discord.SelectOption(
+                label=_("Device stat ceiling: off"),
+                value=OFF,
+                description=_("Live behaviour: new forges have no ceiling"),
+                default=self.max_stat is None,
+            )
+        ] + [
+            discord.SelectOption(
+                label=_("Device stat ceiling: {v}").format(v=v),
+                value=str(v),
+                description=_("FORGE_MAX_STAT (migration only)") if v == self.live_max_stat else None,
+                default=v == self.max_stat,
+            )
+            for v in _with_live(MAX_STAT_CHOICES, self.live_max_stat)[:24]
+        ]
+        fraction_options = [
+            discord.SelectOption(
+                label=_("Device reward share: {v:.0%}").format(v=v),
+                value=str(v),
+                description=live(v == self.live_fraction),
+                default=v == self.fraction,
+            )
+            for v in _with_live(FRACTION_CHOICES, self.live_fraction)
+        ]
+        return [
+            _SimSelect("cap", _("FORGE_STAT_MODIFIER_CAP"), cap_options[:25]),
+            _SimSelect("max_stat", _("FORGE_MAX_STAT"), max_options),
+            _SimSelect("fraction", _("FORGED_REWARD_FRACTION"), fraction_options[:25]),
+        ]
+
     def _buttons(self) -> List[discord.ui.Button]:
         forges = discord.ui.Button(
             label=_("Forges: {n}").format(n=self.forges), style=discord.ButtonStyle.primary
         )
         forges.callback = self._cycle_forges
-        close = discord.ui.Button(label=_("Close"), style=discord.ButtonStyle.secondary)
+        page = discord.ui.Button(
+            label=_("Back to setup") if self.tuning else _("Tuning"), style=discord.ButtonStyle.secondary
+        )
+        page.callback = self._toggle_tuning
+        buttons = [forges, page]
+        if self.tuning:
+            reset = discord.ui.Button(label=_("Reset to live"), style=discord.ButtonStyle.secondary)
+            reset.callback = self._reset_tuning
+            buttons.append(reset)
+        close = discord.ui.Button(label=_("Close"), style=discord.ButtonStyle.danger)
         close.callback = self._close
-        return [forges, close]
+        buttons.append(close)
+        return buttons
 
     # ---- callbacks ----
+
+    async def _update(self, interaction: discord.Interaction) -> None:
+        self.render()
+        await interaction.response.edit_message(view=self)
 
     async def on_select(self, interaction: discord.Interaction, key: str, value: str) -> None:
         if key == "input_set":
@@ -287,15 +411,25 @@ class ForgeSimView(discord.ui.LayoutView):
                 self.build_pieces = len(self.sets[value])
         elif key == "build_pieces":
             self.build_pieces = int(value)
+        elif key in ("cap", "fraction"):
+            setattr(self, key, float(value))
+        elif key == "max_stat":
+            self.max_stat = None if value == OFF else int(value)
         else:
             setattr(self, key, value)
-        self.render()
-        await interaction.response.edit_message(view=self)
+        await self._update(interaction)
 
     async def _cycle_forges(self, interaction: discord.Interaction) -> None:
         self.forges = FORGE_COUNTS[(FORGE_COUNTS.index(self.forges) + 1) % len(FORGE_COUNTS)]
-        self.render()
-        await interaction.response.edit_message(view=self)
+        await self._update(interaction)
+
+    async def _toggle_tuning(self, interaction: discord.Interaction) -> None:
+        self.tuning = not self.tuning
+        await self._update(interaction)
+
+    async def _reset_tuning(self, interaction: discord.Interaction) -> None:
+        self.cap, self.max_stat, self.fraction = self.live_cap, None, self.live_fraction
+        await self._update(interaction)
 
     async def _close(self, interaction: discord.Interaction) -> None:
         self.render(controls=False)
@@ -345,6 +479,7 @@ class ForgeSimulator(MixinMeta):
 
         Pick the two set pieces to forge, the gear your character wears, the forge roll and how
         many times to forge in a row. Uses the live forge formula and your current gear by default.
+        The Tuning page tries other values for the forge balance settings without changing the game.
         """
         adv_cog = self.bot.get_cog("Adventure")
         if not adv_cog:
@@ -355,6 +490,8 @@ class ForgeSimulator(MixinMeta):
         cap = getattr(class_abilities, "FORGE_STAT_MODIFIER_CAP", 1.0)
         forge_limit = getattr(class_abilities, "FORGE_LIMIT", 3)
         unforgeable = getattr(constants, "UNFORGEABLE_SETS", set())
+        max_stat = getattr(constants, "FORGE_MAX_STAT", None)
+        fraction = getattr(constants, "FORGED_REWARD_FRACTION", 1.0)
 
         sets: Dict[str, Dict[str, dict]] = {}
         for name, data in adv_cog.TR_GEAR_SET.items():
@@ -365,5 +502,7 @@ class ForgeSimulator(MixinMeta):
             return await ctx.send(view=text_view(_("There are no forgeable sets in the current theme.")))
 
         my_loadout = await self._my_loadout(ctx, adv_cog, adv_pkg)
-        view = ForgeSimView(ctx.author, sets, forgeable_sets, my_loadout, cap, forge_limit)
+        view = ForgeSimView(
+            ctx.author, sets, forgeable_sets, my_loadout, cap, forge_limit, max_stat, fraction
+        )
         view.message = await ctx.send(view=view)
