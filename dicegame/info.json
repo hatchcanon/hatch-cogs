@@ -15,5 +15,5 @@
         "betting",
         "slash"
     ],
-    "end_user_data_statement": "This cog stores Discord user IDs temporarily during active dice games to track player bets and balances. This data is only kept in memory during the 30-second betting duration and is not permanently stored. All balance data is handled through Red-DiscordBot's built-in bank system."
+    "end_user_data_statement": "This cog stores Discord user IDs temporarily during active dice games to track player bets and balances. This data is only kept in memory during the 30-second betting duration. The cog also persistently stores, per server member, the total credits won and lost in dice games for the leaderboard. All balance data is handled through Red-DiscordBot's built-in bank system."
 }
