@@ -64,13 +64,26 @@ class AdventureHelperListeners(MixinMeta):
         # Positive means attack is better (talk_defense is higher)
         advantage_diff = attack_defense - talk_defense
 
+        # A 100x modifier means that approach is effectively impossible,
+        # regardless of how big the gap to the other side is.
+        if attack_defense >= 100 and talk_defense >= 100:
+            return "EXTREMELY DIFFICULT! Both approaches are nearly impossible. Consider running!", "Either"
+        if attack_defense >= 100:
+            return (
+                f"DEFINITELY TALK! Attack is nearly impossible ({attack_defense}x) while talk is much easier ({talk_defense}x).",
+                "Talk",
+            )
+        if talk_defense >= 100:
+            return (
+                f"DEFINITELY ATTACK! Talk is nearly impossible ({talk_defense}x) while attack is much easier ({attack_defense}x).",
+                "Attack",
+            )
+
         # Determine the preferred action
         if abs(advantage_diff) < 0.1:
             # Nearly equal, no strong preference
             action = "Either"
-            if attack_defense >= 100 or talk_defense >= 100:
-                recommendation = "EXTREMELY DIFFICULT! One approach is nearly impossible. Try the other carefully!"
-            elif attack_defense >= 2.0 and talk_defense >= 2.0:
+            if attack_defense >= 2.0 and talk_defense >= 2.0:
                 recommendation = "VERY TOUGH! Both approaches are difficult. Bring your best gear and party!"
             elif attack_defense <= 0.5 and talk_defense <= 0.5:
                 recommendation = "EASY WIN! Both attack and talk are favorable. Quick victory expected!"
@@ -81,9 +94,7 @@ class AdventureHelperListeners(MixinMeta):
             # Talk is better (attack_defense is higher)
             action = "Talk"
 
-            if advantage_diff >= 99:
-                recommendation = f"DEFINITELY TALK! Attack is nearly impossible ({attack_defense}x) while talk is much easier ({talk_defense}x)."
-            elif advantage_diff >= 1.0:
+            if advantage_diff >= 1.0:
                 recommendation = f"STRONGLY RECOMMEND TALK! Attack defense is {attack_defense}x vs talk defense {talk_defense}x. Talk has a huge advantage!"
             elif advantage_diff >= 0.5:
                 recommendation = f"Talk recommended! Talk defense ({talk_defense}x) is significantly better than attack defense ({attack_defense}x)."
@@ -97,16 +108,14 @@ class AdventureHelperListeners(MixinMeta):
             action = "Attack"
             advantage_diff = abs(advantage_diff)
 
-            if advantage_diff >= 99:
-                recommendation = f"DEFINITELY ATTACK! Talk is nearly impossible ({talk_defense}x) while attack is much easier ({attack_defense}x)."
-            elif advantage_diff >= 1.0:
+            if advantage_diff >= 1.0:
                 recommendation = f"STRONGLY RECOMMEND ATTACK! Talk defense is {talk_defense}x vs attack defense {attack_defense}x. Attack has a huge advantage!"
             elif advantage_diff >= 0.5:
                 recommendation = f"Attack recommended! Attack defense ({attack_defense}x) is significantly better than talk defense ({talk_defense}x)."
             elif advantage_diff >= 0.2:
                 recommendation = f"Attack is favorable. Attack defense ({attack_defense}x) is moderately better than talk defense ({talk_defense}x)."
             else:
-                recommendation = f"Slight attack advantage. Attack defense ({attack_defense}x) is a bit better than talk defense ({attack_defense}x)."
+                recommendation = f"Slight attack advantage. Attack defense ({attack_defense}x) is a bit better than talk defense ({talk_defense}x)."
 
         return recommendation, action
 
