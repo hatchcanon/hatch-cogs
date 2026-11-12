@@ -1,400 +1,244 @@
-import discord
-from redbot.core import commands, app_commands, Config
-from redbot.core.bot import Red
 import asyncio
-from datetime import datetime, timedelta
-from typing import Optional, Dict, List
 import logging
+from dataclasses import dataclass
+from datetime import timedelta
+from typing import List, Optional, Set
+
+import discord
+from redbot.core import app_commands, commands
+from redbot.core.bot import Red
 
 log = logging.getLogger("red.riotgameping")
 
+NO_MENTIONS = discord.AllowedMentions.none()
 
-class RiotGamePingView(discord.ui.View):
-    """View containing Join/Can't Join buttons for riot game pings"""
-    
-    def __init__(self, cog, game: str, players_needed: int, minutes_till_expiry: int, author_id: int):
-        super().__init__(timeout=minutes_till_expiry*60)
+
+@dataclass(frozen=True)
+class Game:
+    name: str
+    role_id: int
+    colour: discord.Colour
+
+
+VALORANT = Game("Valorant", 700130013168664628, discord.Colour.red())
+LEAGUE = Game("League of Legends", 698726804747452456, discord.Colour.blue())
+QA = Game("QA", 974339999300485180, discord.Colour.blue())
+
+
+class GamePingButtons(discord.ui.ActionRow):
+    """Join / Can't Anymore buttons for a game ping"""
+
+    @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
+    async def join(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view: RiotGamePingView = self.view
+        if view.closed:
+            await interaction.response.send_message("This game ping is no longer active.", ephemeral=True)
+            return
+        if interaction.user.id in view.joined_users:
+            await interaction.response.send_message("You have already joined this game!", ephemeral=True)
+            return
+
+        view.joined_users.append(interaction.user.id)
+        if not view.is_full:
+            view.show_open()
+            await interaction.response.edit_message(view=view, allowed_mentions=NO_MENTIONS)
+            return
+
+        view.show_closed("Filled", "Game is ready to start!", discord.Colour.green())
+        view.close()
+        await interaction.response.edit_message(view=view, allowed_mentions=NO_MENTIONS)
+        mentions = " ".join(f"<@{user_id}>" for user_id in view.joined_users)
+        await interaction.channel.send(f"{mentions} - Your **{view.game.name}** game is ready!")
+
+    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger)
+    async def leave(self, interaction: discord.Interaction, button: discord.ui.Button):
+        view: RiotGamePingView = self.view
+        if view.closed:
+            await interaction.response.send_message("This game ping is no longer active.", ephemeral=True)
+            return
+        if interaction.user.id not in view.joined_users:
+            await interaction.response.send_message(
+                "You need to join the game first before you can leave!", ephemeral=True
+            )
+            return
+
+        if interaction.user.id == view.author_id:
+            # The host leaving cancels the whole ping
+            view.show_closed("Cancelled", "Game cancelled by the host.", discord.Colour.red())
+            view.close()
+        else:
+            view.joined_users.remove(interaction.user.id)
+            view.show_open()
+        await interaction.response.edit_message(view=view, allowed_mentions=NO_MENTIONS)
+
+
+class RiotGamePingView(discord.ui.LayoutView):
+    """Components v2 view for a game ping"""
+
+    def __init__(
+        self,
+        cog: "RiotGamePing",
+        game: Game,
+        role: discord.Role,
+        players_needed: int,
+        minutes_till_expiry: int,
+        author_id: int,
+    ):
+        # No view timeout: it resets on every click, and the ping must expire at a fixed time
+        super().__init__(timeout=None)
         self.cog = cog
         self.game = game
-        self.players_needed = players_needed
+        self.players_needed = players_needed  # in addition to the host
         self.author_id = author_id
-        self.joined_users: List[int] = [author_id]  # Auto-add the creator
-        self.message: Optional[discord.Message] = None
-        self.bot = cog.bot
-        self.minutes_till_expiry = minutes_till_expiry
-        self.created_at = datetime.utcnow()  # Track when the game ping was created
-        self.expiry_time = self.created_at + timedelta(minutes=minutes_till_expiry)  # Fixed expiry time
-        self._timeout_task: Optional[asyncio.Task] = None  # Custom timeout task
-        
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        """Check if user can interact with the buttons"""
-        # Check which button was clicked
-        custom_id = interaction.data.get("custom_id", "")
-        
-        # If it's the can't anymore button, check if user has joined
-        if "cant_join" in custom_id:
-            if interaction.user.id not in self.joined_users:
-                await interaction.response.send_message(
-                    "You need to join the game first before you can leave!",
-                    ephemeral=True
-                )
-                return False
-                
-        return True
-        
-    @discord.ui.button(label="Join", style=discord.ButtonStyle.success)
-    async def join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Handle join button clicks"""
-        user_id = interaction.user.id
-        
-        # Check if user already joined
-        if user_id in self.joined_users:
-            await interaction.response.send_message(
-                "You have already joined this game!", ephemeral=True
-            )
-            return
-            
-        # Add user to joined list
-        self.joined_users.append(user_id)
-        
-        # Update the message
-        embed = await self._create_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
-        
-        # Check if we have enough players (including the author, so +1)
-        if len(self.joined_users) >= self.players_needed + 1:
-            await self._game_ready(interaction)
-        else:
-            # Check if the game should have expired
-            await self._check_expiry()
-            
-    @discord.ui.button(label="Can't Anymore", style=discord.ButtonStyle.danger, custom_id="cant_join")
-    async def cant_join_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Handle can't join button clicks"""
-        user_id = interaction.user.id
-        
-        # If it's the author, cancel the entire game
-        if user_id == self.author_id:
-            await self._cancel_game(interaction)
-            return
-        
-        # Remove user from joined list
-        self.joined_users.remove(user_id)
-        embed = await self._create_embed()
-        await interaction.response.edit_message(embed=embed, view=self)
-        
-        # Check if the game should have expired
-        await self._check_expiry()
-            
-    async def _create_embed(self) -> discord.Embed:
-        """Create the embed for the game ping message"""
-        # Count all joined users (including the author)
-        players_joined = len(self.joined_users) - 1  # Subtract 1 to show additional players needed
-        
-        # Set color and emoji based on game
-        if self.game == "Valorant":
-            color = discord.Color.red()
-            emoji = "<:emoji:740501303838638092>"
-        else:  # League of Legends
-            color = discord.Color.blue()
-            emoji = "<:emoji:740501304165662750>"
-            
-        embed = discord.Embed(
-            title=f"{emoji} Game: {self.game}",
-            # description=f"Looking for people to play **{self.game}**\nStarted by <@{self.author_id}>",
-            color=color if players_joined < self.players_needed else discord.Color.green(),
-            timestamp=self.created_at  # Use creation time instead of current time
+        self.joined_users: List[int] = [author_id]
+        self.header = f"{role.mention} Looking for **{players_needed}** players!"
+        self.lifetime = timedelta(minutes=minutes_till_expiry)
+        self.expires_at = discord.utils.utcnow() + self.lifetime
+        self.message: Optional[discord.PartialMessage] = None
+        self.closed = False
+        self.buttons = GamePingButtons()
+        self._expiry_task: Optional[asyncio.Task] = None
+        self.show_open()
+
+    @property
+    def is_full(self) -> bool:
+        return len(self.joined_users) > self.players_needed
+
+    def show_open(self) -> None:
+        """Rebuild the layout for a ping that is still looking for players"""
+        status = (
+            f"**{len(self.joined_users) - 1}/{self.players_needed}** players"
+            f" · expires <t:{int(self.expires_at.timestamp())}:R>"
         )
-        
-        embed.add_field(
-            name="Players",
-            value=f"{players_joined}/{self.players_needed}",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="Time left",
-            value=f"Expires <t:{int(self.expiry_time.timestamp())}:R>",
-            inline=True
-        )
-        
-        # Show joined users in the "Joined" field (author is included in the list)
-        if self.joined_users:
-            joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
-            embed.add_field(
-                name="Joined",
-                value="\n".join(joined_mentions[:10]) + 
-                      (f"\n*and {len(joined_mentions) - 10} more...*" if len(joined_mentions) > 10 else ""),
-                inline=False
-            )
-            
-        # Calculate remaining time based on fixed expiry time
-        # remaining_time = self.expiry_time - datetime.utcnow()
-        # remaining_minutes = max(0, int(remaining_time.total_seconds() / 60))
-        
-        # embed.set_footer(text=f"Expires in {remaining_minutes} minutes")
-        return embed
-        
-    async def _game_ready(self, interaction: discord.Interaction):
-        """Handle when game has enough players"""
-        # Cancel the timeout task to prevent on_timeout from being called
-        if self._timeout_task:
-            self._timeout_task.cancel()
-        
-        # Disable buttons
-        for item in self.children:
-            item.disabled = True
-        
-        # Set emoji based on game
-        emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
-        
-        # Create filled embed
-        embed = discord.Embed(
-            title=f"{emoji} {self.game} - FILLED",
-            description="Game is ready to start!",
-            color=discord.Color.green(),
-            timestamp=self.created_at
-        )
-        
-        # Update the original message with the filled embed (no buttons)
-        await interaction.edit_original_response(embed=embed, view=None)
-        
-        # Send ready message
-        channel = interaction.channel
-        if channel:
-            # All players are already in joined_users (including author)
-            all_players = self.joined_users
-            joined_mentions = " ".join([f"<@{uid}>" for uid in all_players])
-            
-            await channel.send(
-                content=f"{joined_mentions} - Your **{self.game}** game is ready!",
-            )
-            
-        # Clean up from active views
-        if hasattr(self.cog, 'active_views') and self.message:
-            self.cog.active_views.pop(self.message.id, None)
-            
+        self._render(self.game.name, status, self.game.colour, buttons=True)
+
+    def show_closed(self, state: str, description: str, colour: discord.Colour) -> None:
+        """Rebuild the layout for a ping that was filled, cancelled or expired"""
+        self._render(f"{self.game.name} - {state}", description, colour)
+
+    def _render(self, title: str, body: str, colour: discord.Colour, *, buttons: bool = False) -> None:
+        items = [
+            discord.ui.TextDisplay(f"## {title}\n{body}"),
+            discord.ui.Separator(),
+            discord.ui.TextDisplay("\n".join(f"<@{user_id}>" for user_id in self.joined_users)),
+        ]
+        if buttons:
+            items += [discord.ui.Separator(), self.buttons]
+
+        self.clear_items()
+        self.add_item(discord.ui.TextDisplay(self.header))
+        self.add_item(discord.ui.Container(*items, accent_colour=colour))
+
+    def start(self, message: discord.PartialMessage) -> None:
+        """Attach the sent message and start the expiry countdown"""
+        self.message = message
+        self.cog.active_views.add(self)
+        self._expiry_task = asyncio.create_task(self._expire())
+
+    def close(self) -> None:
+        """Stop accepting clicks and cancel the pending expiry"""
+        self.closed = True
+        if self._expiry_task:
+            self._expiry_task.cancel()
+            self._expiry_task = None
+        self.cog.active_views.discard(self)
         self.stop()
-        
-    async def _check_expiry(self):
-        """Check if the game should expire and handle it"""
-        if datetime.utcnow() >= self.expiry_time:
-            await self.on_timeout()
-        
-    async def _start_custom_timeout(self):
-        """Start a custom timeout task that respects the fixed expiry time"""
-        if self._timeout_task:
-            self._timeout_task.cancel()
-            
-        # Calculate remaining seconds until expiry
-        remaining_time = self.expiry_time - datetime.utcnow()
-        remaining_seconds = max(0, remaining_time.total_seconds())
-        
-        if remaining_seconds > 0:
-            self._timeout_task = asyncio.create_task(self._custom_timeout_handler(remaining_seconds))
-    
-    async def _custom_timeout_handler(self, seconds: float):
-        """Custom timeout handler that waits for the exact expiry time"""
-        try:
-            await asyncio.sleep(seconds)
-            await self.on_timeout()
-        except asyncio.CancelledError:
-            pass  # Task was cancelled, which is fine
-        
-    async def _cancel_game(self, interaction: discord.Interaction):
-        """Handle when the author cancels the game"""
-        # Disable buttons
-        for item in self.children:
-            item.disabled = True
-            
-        # Set emoji based on game
-        emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
-            
-        embed = discord.Embed(
-            title=f"{emoji} Game: {self.game} - CANCELLED",
-            description="Game cancelled by the host.",
-            color=discord.Color.red(),
-            timestamp=self.created_at
-        )
-        
-        # Show joined users if any
-        if self.joined_users:
-            joined_mentions = [f"<@{uid}>" for uid in self.joined_users]
-            embed.add_field(
-                name="Players who had joined",
-                value="\n".join(joined_mentions[:10]),
-                inline=False
-            )
-            
-        await interaction.response.edit_message(embed=embed, view=None)
-        
-        # Clean up from active views
-        if hasattr(self.cog, 'active_views') and self.message:
-            self.cog.active_views.pop(self.message.id, None)
-            
-        self.stop()
-        
-    async def on_timeout(self):
-        """Handle view timeout"""
-        # Ensure we have the message reference
-        if not self.message:
-            log.error("No message reference found for timeout handling")
+
+    async def _expire(self) -> None:
+        await asyncio.sleep(self.lifetime.total_seconds())
+        self._expiry_task = None  # so close() doesn't cancel this task mid-edit
+        if self.closed:
             return
-            
+
+        self.show_closed("Cancelled", "Not enough players joined in time.", discord.Colour.red())
+        self.close()
         try:
-            # Fetch the message to ensure it still exists
-            try:
-                channel = self.message.channel
-                if channel:
-                    self.message = await channel.fetch_message(self.message.id)
-            except discord.NotFound:
-                log.error("Message not found for timeout update")
-                return
-            except Exception as e:
-                log.error(f"Error fetching message: {e}")
-                return
-                
-            # Set emoji based on game
-            emoji = "<:emoji:740501303838638092>" if self.game == "Valorant" else "<:emoji:740501304165662750>"
-                
-            embed = discord.Embed(
-                title=f"{emoji} {self.game} - CANCELLED",
-                description="Not enough players joined in time. Game cancelled.",
-                color=discord.Color.red(),
-                timestamp=self.created_at  # Use creation time for consistency
-            )
-            
-            # All players are already in joined_users (including author)
-            all_players = self.joined_users
-            if all_players:
-                joined_mentions = [f"<@{uid}>" for uid in all_players]
-                embed.add_field(
-                    name="Players who joined",
-                    value="\n".join(joined_mentions[:10]),
-                    inline=False
-                )
-                
-            await self.message.edit(embed=embed, view=None)
-            log.info(f"Game ping for {self.game} timed out and was cancelled")
-            
-            # Clean up from active views
-            if hasattr(self.cog, 'active_views'):
-                self.cog.active_views.pop(self.message.id, None)
-        except Exception as e:
-            log.error(f"Failed to update timed out game message: {e}")
+            await self.message.edit(view=self, allowed_mentions=NO_MENTIONS)
+        except discord.HTTPException:
+            log.exception("Failed to update expired %s game ping", self.game.name)
 
 
 class RiotGamePing(commands.Cog):
     """
     Create game pings for Riot Games (Valorant and League of Legends)
     """
-    
+
     def __init__(self, bot: Red):
         self.bot = bot
-        self.active_views: Dict[int, RiotGamePingView] = {}  # Track active views by message ID
-        
-        # Hardcoded role IDs for Riot games
-        self.VALORANT_ROLE_ID = 700130013168664628
-        self.LOL_ROLE_ID = 698726804747452456
-        self.QA_ID = 974339999300485180
-        
-    async def cog_load(self):
-        """Called when the cog is loaded"""
-        log.info("RiotGamePing cog loaded")
-        
+        self.active_views: Set[RiotGamePingView] = set()
+
     async def cog_unload(self):
-        """Called when the cog is unloaded"""
-        # Cancel all active views
-        for view in self.active_views.values():
-            view.stop()
-        log.info("RiotGamePing cog unloaded")
-        
+        for view in list(self.active_views):
+            view.close()
+
     @app_commands.command(name="val", description="Look for players for Valorant")
-    @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
+    @app_commands.describe(
+        players_needed="Number of players needed (default: 4)",
+        minutes_till_expiry="Number of minutes until this ping expires (default: 30)",
+    )
     @app_commands.guild_only()
     async def valorant_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
-        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
+        players_needed: app_commands.Range[int, 1, 10] = 4,
+        minutes_till_expiry: app_commands.Range[int, 10, 60] = 30,
     ):
         """Create a Valorant game ping"""
-        await self._create_game_ping(interaction, "Valorant", players_needed, minutes_till_expiry, self.VALORANT_ROLE_ID)
-        
+        await self._create_game_ping(interaction, VALORANT, players_needed, minutes_till_expiry)
+
     @app_commands.command(name="lol", description="Look for players for League of Legends")
-    @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
+    @app_commands.describe(
+        players_needed="Number of players needed (default: 4)",
+        minutes_till_expiry="Number of minutes until this ping expires (default: 30)",
+    )
     @app_commands.guild_only()
     async def lol_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
-        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
+        players_needed: app_commands.Range[int, 1, 10] = 4,
+        minutes_till_expiry: app_commands.Range[int, 10, 60] = 30,
     ):
         """Create a League of Legends game ping"""
-        await self._create_game_ping(interaction, "League of Legends", players_needed, minutes_till_expiry, self.LOL_ROLE_ID)
+        await self._create_game_ping(interaction, LEAGUE, players_needed, minutes_till_expiry)
 
     @app_commands.command(name="qa", description="QA ping")
-    @app_commands.describe(players_needed="Number of players needed (default: 4)")
-    @app_commands.describe(minutes_till_expiry="Number of minutes until this ping expires (default: 30)")
+    @app_commands.describe(
+        players_needed="Number of players needed (default: 4)",
+        minutes_till_expiry="Number of minutes until this ping expires (default: 30)",
+    )
     @app_commands.guild_only()
     async def qa_ping(
         self,
         interaction: discord.Interaction,
-        players_needed: Optional[app_commands.Range[int, 1, 10]] = 4,
-        minutes_till_expiry: Optional[app_commands.Range[int, 10, 60]] = 30
+        players_needed: app_commands.Range[int, 1, 10] = 4,
+        minutes_till_expiry: app_commands.Range[int, 10, 60] = 30,
     ):
         """Create a QA ping"""
-        await self._create_game_ping(interaction, "QA", players_needed, minutes_till_expiry, self.QA_ID)
-        
-    async def _create_game_ping(self, interaction: discord.Interaction, game: str, players_needed: int, minutes_till_expiry: int, role_id: int):
-        """Create a game ping for the specified game"""
-        # Get the role
-        role = interaction.guild.get_role(role_id)
-        
+        await self._create_game_ping(interaction, QA, players_needed, minutes_till_expiry)
+
+    async def _create_game_ping(
+        self,
+        interaction: discord.Interaction,
+        game: Game,
+        players_needed: int,
+        minutes_till_expiry: int,
+    ):
+        role = interaction.guild.get_role(game.role_id)
         if not role:
             await interaction.response.send_message(
-                f"The {game} role could not be found. Please contact an admin.",
-                ephemeral=True
+                f"The {game.name} role could not be found. Please contact an admin.",
+                ephemeral=True,
             )
             return
-        
-        # Create the game ping view
-        view = RiotGamePingView(
-            cog=self,
-            game=game,
-            players_needed=players_needed,
-            minutes_till_expiry=minutes_till_expiry,
-            author_id=interaction.user.id
-        )
-        
-        # Create initial embed
-        embed = await view._create_embed()
-        
-        # Send the message with role ping
+
+        view = RiotGamePingView(self, game, role, players_needed, minutes_till_expiry, interaction.user.id)
+        # Ping the role only; the host's mention in the player list should stay silent
         await interaction.response.send_message(
-            content=f"{role.mention} Looking for **{players_needed}** players!",
-            embed=embed,
             view=view,
-            allowed_mentions=discord.AllowedMentions(roles=True)
+            allowed_mentions=discord.AllowedMentions(everyone=False, users=False, roles=[role]),
         )
-        
-        # Get the message and store it in the view
-        view.message = await interaction.original_response()
-        
-        # Start the custom timeout task
-        await view._start_custom_timeout()
-        
-        # Track the view
-        self.active_views[view.message.id] = view
-        
-        # Check if game is already ready (e.g., 0 additional players needed)
-        if players_needed == 0:
-            await view._game_ready(interaction)
 
-
-async def setup(bot: Red):
-    """Load the cog"""
-    cog = RiotGamePing(bot)
-    await bot.add_cog(cog)
+        # Keep a bot-token handle on the message: the interaction token dies after
+        # 15 minutes, well before a ping can expire
+        message = await interaction.original_response()
+        view.start(interaction.channel.get_partial_message(message.id))
