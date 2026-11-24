@@ -5,7 +5,7 @@ from datetime import timedelta
 from typing import List, Optional, Set
 
 import discord
-from redbot.core import app_commands, commands
+from redbot.core import Config, app_commands, commands
 from redbot.core.bot import Red
 
 log = logging.getLogger("red.riotgameping")
@@ -16,13 +16,13 @@ NO_MENTIONS = discord.AllowedMentions.none()
 @dataclass(frozen=True)
 class Game:
     name: str
-    role_id: int
+    config_key: str  # guild config key holding this game's ping role ID
     colour: discord.Colour
 
 
-VALORANT = Game("Valorant", 700130013168664628, discord.Colour.red())
-LEAGUE = Game("League of Legends", 698726804747452456, discord.Colour.blue())
-QA = Game("QA", 974339999300485180, discord.Colour.blue())
+VALORANT = Game("Valorant", "val_role", discord.Colour.red())
+LEAGUE = Game("League of Legends", "lol_role", discord.Colour.blue())
+GAMES = (VALORANT, LEAGUE)
 
 
 class GamePingButtons(discord.ui.ActionRow):
@@ -165,6 +165,8 @@ class RiotGamePing(commands.Cog):
 
     def __init__(self, bot: Red):
         self.bot = bot
+        self.config = Config.get_conf(self, identifier=0x52474150, force_registration=True)
+        self.config.register_guild(**{game.config_key: None for game in GAMES})
         self.active_views: Set[RiotGamePingView] = set()
 
     async def cog_unload(self):
@@ -201,21 +203,6 @@ class RiotGamePing(commands.Cog):
         """Create a League of Legends game ping"""
         await self._create_game_ping(interaction, LEAGUE, players_needed, minutes_till_expiry)
 
-    @app_commands.command(name="qa", description="QA ping")
-    @app_commands.describe(
-        players_needed="Number of players needed (default: 4)",
-        minutes_till_expiry="Number of minutes until this ping expires (default: 30)",
-    )
-    @app_commands.guild_only()
-    async def qa_ping(
-        self,
-        interaction: discord.Interaction,
-        players_needed: app_commands.Range[int, 1, 10] = 4,
-        minutes_till_expiry: app_commands.Range[int, 10, 60] = 30,
-    ):
-        """Create a QA ping"""
-        await self._create_game_ping(interaction, QA, players_needed, minutes_till_expiry)
-
     async def _create_game_ping(
         self,
         interaction: discord.Interaction,
@@ -223,10 +210,11 @@ class RiotGamePing(commands.Cog):
         players_needed: int,
         minutes_till_expiry: int,
     ):
-        role = interaction.guild.get_role(game.role_id)
+        role_id = await self.config.guild(interaction.guild).get_attr(game.config_key)()
+        role = interaction.guild.get_role(role_id) if role_id else None
         if not role:
             await interaction.response.send_message(
-                f"The {game.name} role could not be found. Please contact an admin.",
+                f"No {game.name} role is set up for this server. Please contact an admin.",
                 ephemeral=True,
             )
             return
@@ -242,3 +230,36 @@ class RiotGamePing(commands.Cog):
         # 15 minutes, well before a ping can expire
         message = await interaction.original_response()
         view.start(interaction.channel.get_partial_message(message.id))
+
+    @commands.group(name="gamepingset")
+    @commands.guild_only()
+    @commands.admin_or_permissions(administrator=True)
+    async def gamepingset(self, ctx: commands.Context):
+        """Configure the roles pinged by /val and /lol"""
+
+    @gamepingset.command(name="val")
+    async def gamepingset_val(self, ctx: commands.Context, role: Optional[discord.Role] = None):
+        """Set the role pinged by /val. Leave blank to clear it."""
+        await self._set_role(ctx, VALORANT, role)
+
+    @gamepingset.command(name="lol")
+    async def gamepingset_lol(self, ctx: commands.Context, role: Optional[discord.Role] = None):
+        """Set the role pinged by /lol. Leave blank to clear it."""
+        await self._set_role(ctx, LEAGUE, role)
+
+    @gamepingset.command(name="show")
+    async def gamepingset_show(self, ctx: commands.Context):
+        """Show the currently configured ping roles"""
+        lines = []
+        for game in GAMES:
+            role_id = await self.config.guild(ctx.guild).get_attr(game.config_key)()
+            role = ctx.guild.get_role(role_id) if role_id else None
+            lines.append(f"**{game.name}:** {role.mention if role else 'Not set'}")
+        await ctx.send("\n".join(lines), allowed_mentions=NO_MENTIONS)
+
+    async def _set_role(self, ctx: commands.Context, game: Game, role: Optional[discord.Role]):
+        await self.config.guild(ctx.guild).get_attr(game.config_key).set(role.id if role else None)
+        if role:
+            await ctx.send(f"{game.name} pings will now mention {role.mention}.", allowed_mentions=NO_MENTIONS)
+        else:
+            await ctx.send(f"{game.name} ping role cleared.")
